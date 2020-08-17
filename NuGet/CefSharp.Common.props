@@ -3,38 +3,13 @@
   <ItemGroup>
     <CefSharpCommonBinaries32 Include="$(MSBuildThisFileDirectory)..\CefSharp\x86\*.*" />
     <CefSharpCommonBinaries64 Include="$(MSBuildThisFileDirectory)..\CefSharp\x64\*.*" />
+    <CefSharpCommonBinariesAnyCPU Include="$(MSBuildThisFileDirectory)..\CefSharp\**\*.*" />
+
+    <CefSharpBrowserProcessCore32 Include="$(MSBuildThisFileDirectory)..\CefSharp\x86\CefSharp.BrowserSubprocess.Core.dll" />
+    <CefSharpBrowserProcessCore64 Include="$(MSBuildThisFileDirectory)..\CefSharp\x64\CefSharp.BrowserSubprocess.Core.dll" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <CefSharpTargetDir Condition=" '$(CefSharpTargetDir)' == '' "></CefSharpTargetDir>
-  </PropertyGroup>
-
+  
   <Choose>
-    <When Condition="'$(Platform)' == 'AnyCPU'">
-      <ItemGroup>
-        <Reference Include="CefSharp">
-          <HintPath>$(MSBuildThisFileDirectory)..\CefSharp\x86\CefSharp.dll</HintPath>
-          <Private>False</Private>
-        </Reference>
-        <Reference Include="CefSharp.Core">
-          <HintPath>$(MSBuildThisFileDirectory)..\CefSharp\x86\CefSharp.Core.dll</HintPath>
-          <Private>False</Private>
-        </Reference>
-        <!--
-        We include CefSharp and CefSharp.Core as private false then copy the files using a
-        None entry. The 32bit libs must be included first or VS will use the x64
-        ones for the VS Designer.
-        -->
-        <None Include="@(CefSharpCommonBinaries32)">
-          <Link>$(CefSharpTargetDir)\x86\%(RecursiveDir)%(FileName)%(Extension)</Link>
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Include="@(CefSharpCommonBinaries64)">
-          <Link>$(CefSharpTargetDir)\x64\%(RecursiveDir)%(FileName)%(Extension)</Link>
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-      </ItemGroup>
-    </When>
     <When Condition="'$(Platform)' == 'x64'">
       <ItemGroup>
         <Reference Include="CefSharp">
@@ -45,10 +20,6 @@
           <HintPath>$(MSBuildThisFileDirectory)..\CefSharp\x64\CefSharp.Core.dll</HintPath>
           <Private>False</Private>
         </Reference>
-		<None Include="@(CefSharpCommonBinaries64)">
-          <Link>$(CefSharpTargetDir)\%(RecursiveDir)%(FileName)%(Extension)</Link>
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
       </ItemGroup>
     </When>
     <!-- x86, Win32 and AnyCPU -->
@@ -62,10 +33,6 @@
           <HintPath>$(MSBuildThisFileDirectory)..\CefSharp\x86\CefSharp.Core.dll</HintPath>
           <Private>False</Private>
         </Reference>
-		<None Include="@(CefSharpCommonBinaries32)">
-          <Link>$(CefSharpTargetDir)\%(RecursiveDir)%(FileName)%(Extension)</Link>
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
       </ItemGroup>
     </Otherwise>
   </Choose>
