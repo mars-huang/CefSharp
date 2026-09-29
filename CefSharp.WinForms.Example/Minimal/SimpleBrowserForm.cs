@@ -1,11 +1,12 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2010 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using CefSharp.Example;
-using CefSharp.WinForms.Internals;
+using CefSharp.Example.JavascriptBinding;
 
 namespace CefSharp.WinForms.Example.Minimal
 {
@@ -20,7 +21,7 @@ namespace CefSharp.WinForms.Example.Minimal
             Text = "CefSharp";
             WindowState = FormWindowState.Maximized;
 
-            var bitness = Environment.Is64BitProcess ? "x64" : "x86";
+            var bitness = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
             var version = String.Format("Chromium: {0}, CEF: {1}, CefSharp: {2}, Environment: {3}", Cef.ChromiumVersion, Cef.CefVersion, Cef.CefSharpVersion, bitness);
             DisplayOutput(version);
 
@@ -29,6 +30,19 @@ namespace CefSharp.WinForms.Example.Minimal
             ResizeEnd += (s, e) => ResumeLayout(true);
 
             Load += OnLoad;
+        }
+
+        public IContainer Components
+        {
+            get
+            {
+                if (components == null)
+                {
+                    components = new Container();
+                }
+
+                return components;
+            }
         }
 
         private void OnLoad(object sender, EventArgs e)
@@ -49,7 +63,9 @@ namespace CefSharp.WinForms.Example.Minimal
             browser.StatusMessage += OnBrowserStatusMessage;
             browser.TitleChanged += OnBrowserTitleChanged;
             browser.AddressChanged += OnBrowserAddressChanged;
-            browser.JavascriptObjectRepository.Register("bound", new BoundObject());
+#if !NETCOREAPP
+            browser.JavascriptObjectRepository.Register("bound", new BoundObject(), false);
+#endif
         }
 
         private void OnBrowserConsoleMessage(object sender, ConsoleMessageEventArgs args)
@@ -122,7 +138,7 @@ namespace CefSharp.WinForms.Example.Minimal
                     width -= item.Width - item.Margin.Horizontal;
                 }
             }
-            urlTextBox.Width = Math.Max(0, width - urlTextBox.Margin.Horizontal - 18);
+            urlTextBox.Width = Math.Max(100, width - urlTextBox.Margin.Horizontal - goButton.Width);
         }
 
         private void ExitMenuItemClick(object sender, EventArgs e)
@@ -161,7 +177,19 @@ namespace CefSharp.WinForms.Example.Minimal
         {
             if (Uri.IsWellFormedUriString(url, UriKind.RelativeOrAbsolute))
             {
-                browser.Load(url);
+                browser.LoadUrl(url);
+            }
+            else
+            {
+                var searchUrl = "https://www.google.com/search?q=" + Uri.EscapeDataString(url);
+
+                browser.LoadUrl(searchUrl);
+            }
+
+            //Give the browser focus after starting navigation
+            if (browser.CanSelect)
+            {
+                browser.Select();
             }
         }
     }

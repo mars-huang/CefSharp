@@ -1,4 +1,4 @@
-// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright Â© 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -12,52 +12,63 @@ using namespace System::Threading;
 
 namespace CefSharp
 {
-    void JavascriptRootObjectWrapper::Bind(ICollection<JavascriptObject^>^ objects, const CefRefPtr<CefV8Value>& v8Value)
+    namespace BrowserSubprocess
     {
-        if (objects->Count > 0)
+        void JavascriptRootObjectWrapper::Bind(ICollection<JavascriptObject^>^ objects, const CefRefPtr<CefV8Value>& v8Value)
         {
-            auto saveMethod = gcnew Func<JavascriptAsyncMethodCallback^, int64>(this, &JavascriptRootObjectWrapper::SaveMethodCallback);
-            auto promiseCreator = v8Value->GetValue(CefAppUnmanagedWrapper::kPromiseCreatorFunction);
-
-            for each (JavascriptObject^ obj in Enumerable::OfType<JavascriptObject^>(objects))
+            if (objects->Count > 0)
             {
-                if (obj->IsAsync)
-                {
-                    auto wrapperObject = gcnew JavascriptAsyncObjectWrapper(_callbackRegistry, saveMethod);
-                    wrapperObject->Bind(obj, v8Value, promiseCreator);
+                auto saveMethod = gcnew Func<JavascriptAsyncMethodCallback^, int64_t>(this, &JavascriptRootObjectWrapper::SaveMethodCallback);
 
-                    _wrappedAsyncObjects->Add(wrapperObject);
-                }
-                else
+                for each (JavascriptObject ^ obj in Enumerable::OfType<JavascriptObject^>(objects))
                 {
-                    auto wrapperObject = gcnew JavascriptObjectWrapper(_browserProcess);
-                    wrapperObject->Bind(obj, v8Value, _callbackRegistry);
+                    if (obj->IsAsync)
+                    {
+                        auto wrapperObject = gcnew JavascriptAsyncObjectWrapper(_callbackRegistry, saveMethod);
+                        wrapperObject->Bind(obj, v8Value);
 
-                    _wrappedObjects->Add(wrapperObject);
+                        _wrappedAsyncObjects->Add(wrapperObject);
+                    }
+#ifndef NETCOREAPP
+                    else
+                    {
+                        if (_browserProcess == nullptr)
+                        {
+                            LOG(ERROR) << StringUtils::ToNative("IBrowserProcess is null, unable to bind object " + obj->JavascriptName).ToString();
+
+                            continue;
+                        }
+
+                        auto wrapperObject = gcnew JavascriptObjectWrapper(_browserProcess);
+                        wrapperObject->Bind(obj, v8Value, _callbackRegistry);
+
+                        _wrappedObjects->Add(wrapperObject);
+                    }
+#endif
                 }
             }
         }
-    }
 
-    JavascriptCallbackRegistry^ JavascriptRootObjectWrapper::CallbackRegistry::get()
-    {
-        return _callbackRegistry;
-    }
-
-    int64 JavascriptRootObjectWrapper::SaveMethodCallback(JavascriptAsyncMethodCallback^ callback)
-    {
-        auto callbackId = Interlocked::Increment(_lastCallback);
-        _methodCallbacks->Add(callbackId, callback);
-        return callbackId;
-    }
-
-    bool JavascriptRootObjectWrapper::TryGetAndRemoveMethodCallback(int64 id, JavascriptAsyncMethodCallback^% callback)
-    {
-        bool result = false;
-        if (result = _methodCallbacks->TryGetValue(id, callback))
+        JavascriptCallbackRegistry^ JavascriptRootObjectWrapper::CallbackRegistry::get()
         {
-            _methodCallbacks->Remove(id);
+            return _callbackRegistry;
         }
-        return result;
+
+        int64_t JavascriptRootObjectWrapper::SaveMethodCallback(JavascriptAsyncMethodCallback^ callback)
+        {
+            auto callbackId = Interlocked::Increment(_lastCallback);
+            _methodCallbacks->Add(callbackId, callback);
+            return callbackId;
+        }
+
+        bool JavascriptRootObjectWrapper::TryGetAndRemoveMethodCallback(int64_t id, JavascriptAsyncMethodCallback^% callback)
+        {
+            bool result = false;
+            if (result = _methodCallbacks->TryGetValue(id, callback))
+            {
+                _methodCallbacks->Remove(id);
+            }
+            return result;
+        }
     }
 }

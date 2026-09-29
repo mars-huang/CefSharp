@@ -1,4 +1,4 @@
-// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright Â© 2015 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -7,10 +7,11 @@
 #include "JavascriptCallbackWrapper.h"
 
 using namespace System::Collections::Concurrent;
+using namespace CefSharp::BrowserSubprocess;
 
 namespace CefSharp
 {
-    namespace Internals
+    namespace BrowserSubprocess
     {
         private ref class JavascriptCallbackRegistry
         {
@@ -19,14 +20,13 @@ namespace CefSharp
             //Is static so ids are unique to this process, which is required until #1984 is implemented
             //and callbacks are disposed of properly between contexts
             static Int64 _lastId;
-            int _browserId;
             ConcurrentDictionary<Int64, JavascriptCallbackWrapper^>^ _callbacks;
 
         internal:
-            JavascriptCallbackWrapper^ FindWrapper(int64 id);
+            JavascriptCallbackWrapper^ FindWrapper(int64_t id);
 
         public:
-            JavascriptCallbackRegistry(int browserId) : _browserId(browserId)
+            JavascriptCallbackRegistry()
             {
                 _callbacks = gcnew ConcurrentDictionary<Int64, JavascriptCallbackWrapper^>();
             }

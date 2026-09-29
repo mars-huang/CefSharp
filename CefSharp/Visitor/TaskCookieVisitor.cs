@@ -1,11 +1,10 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2016 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using CefSharp.Internals;
 
 namespace CefSharp
 {
@@ -19,33 +18,33 @@ namespace CefSharp
         private List<Cookie> list;
 
         /// <summary>
-        /// Default constructor
+        /// Initializes a new instance of the TaskCookieVisitor class.
         /// </summary>
         public TaskCookieVisitor()
         {
-            taskCompletionSource = new TaskCompletionSource<List<Cookie>>();
+            taskCompletionSource = new TaskCompletionSource<List<Cookie>>(TaskCreationOptions.RunContinuationsAsynchronously);
             list = new List<Cookie>();
         }
 
+        /// <inheritdoc/>
         bool ICookieVisitor.Visit(Cookie cookie, int count, int total, ref bool deleteCookie)
         {
-            list.Add(cookie);            
+            list.Add(cookie);
 
-            if(count == (total - 1))
+            if (count == (total - 1))
             {
-                //Set the result on the ThreadPool so the Task continuation is not run on the CEF UI Thread
-                taskCompletionSource.TrySetResultAsync(list);
+                taskCompletionSource.TrySetResult(list);
             }
 
             return true;
         }
 
+        /// <inheritdoc/>
         void IDisposable.Dispose()
         {
-            if(list != null && list.Count == 0)
+            if (list != null && list.Count == 0)
             {
-                //Set the result on the ThreadPool so the Task continuation is not run on the CEF UI Thread
-                taskCompletionSource.TrySetResultAsync(list);
+                taskCompletionSource.TrySetResult(list);
             }
 
             list = null;

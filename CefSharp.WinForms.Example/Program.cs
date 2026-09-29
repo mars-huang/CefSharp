@@ -1,9 +1,8 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2010 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using CefSharp.Example;
@@ -18,17 +17,16 @@ namespace CefSharp.WinForms.Example
         [STAThread]
         public static int Main(string[] args)
         {
-            const bool simpleSubProcess = false;
+            // DEMO: Change to true to self host the BrowserSubprocess.
+            // instead of using CefSharp.BrowserSubprocess.exe, your applications exe will be used.
+            // In this case CefSharp.WinForms.Example.exe
+            const bool selfHostSubProcess = false;
 
-            Cef.EnableHighDPISupport();
-
-            //NOTE: Using a simple sub processes uses your existing application executable to spawn instances of the sub process.
-            //Features like JSB, EvaluateScriptAsync, custom schemes require the CefSharp.BrowserSubprocess to function
-            if (simpleSubProcess)
+            if (selfHostSubProcess)
             {
-                var exitCode = Cef.ExecuteProcess();
+                var exitCode = CefSharp.BrowserSubprocess.SelfHost.Main(args);
 
-                if(exitCode >= 0)
+                if (exitCode >= 0)
                 {
                     return exitCode;
                 }
@@ -36,16 +34,17 @@ namespace CefSharp.WinForms.Example
 #if DEBUG
                 if (!System.Diagnostics.Debugger.IsAttached)
                 {
-                    MessageBox.Show("When running this Example outside of Visual Studio" +
+                    MessageBox.Show("When running this Example outside of Visual Studio " +
                                     "please make sure you compile in `Release` mode.", "Warning");
                 }
 #endif
 
                 var settings = new CefSettings();
-                settings.BrowserSubprocessPath = "CefSharp.WinForms.Example.exe";
+                settings.BrowserSubprocessPath = System.IO.Path.GetFullPath("CefSharp.WinForms.Example.exe");
 
                 Cef.Initialize(settings);
 
+                Application.EnableVisualStyles();
                 var browser = new SimpleBrowserForm();
                 Application.Run(browser);
             }
@@ -54,33 +53,53 @@ namespace CefSharp.WinForms.Example
 #if DEBUG
                 if (!System.Diagnostics.Debugger.IsAttached)
                 {
-                    MessageBox.Show("When running this Example outside of Visual Studio" +
+                    MessageBox.Show("When running this Example outside of Visual Studio " +
                                     "please make sure you compile in `Release` mode.", "Warning");
                 }
 #endif
 
+                // DEMO: To integrate CEF into your applications existing message loop 
+                // set multiThreadedMessageLoop = false;
                 const bool multiThreadedMessageLoop = true;
+                // When multiThreadedMessageLoop = true then externalMessagePump must be set to false
+                // To enable externalMessagePump set  multiThreadedMessageLoop = false and externalMessagePump = true
+                const bool externalMessagePump = false;
 
+                //TEST: There are a number of different Forms for testing purposes.
                 var browser = new BrowserForm(multiThreadedMessageLoop);
                 //var browser = new SimpleBrowserForm();
                 //var browser = new TabulationDemoForm();
 
                 IBrowserProcessHandler browserProcessHandler;
 
-                if(multiThreadedMessageLoop)
+                if (multiThreadedMessageLoop)
                 {
                     browserProcessHandler = new BrowserProcessHandler();
                 }
                 else
                 {
-                    //Get the current taskScheduler (must be called after the form is created)
-                    var scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+                    if (externalMessagePump)
+                    {
+                        //Get the current taskScheduler (must be called after the form is created)
+                        var scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+                        browserProcessHandler = new ScheduleMessagePumpBrowserProcessHandler(scheduler);
+                    }
+                    else
+                    {
+                        //We'll add out WinForms timer to the components container so it's Diposed
+                        browserProcessHandler = new WinFormsBrowserProcessHandler(browser.Components);
+                    }
 
-                    browserProcessHandler = new WinFormsBrowserProcessHandler(scheduler);
                 }
 
-                CefExample.Init(osr: false, multiThreadedMessageLoop: multiThreadedMessageLoop, browserProcessHandler: browserProcessHandler);
+                var settings = new CefSettings();
+                settings.MultiThreadedMessageLoop = multiThreadedMessageLoop;
+                settings.ExternalMessagePump = externalMessagePump;
 
+                CefExample.Init(settings, browserProcessHandler: browserProcessHandler);
+
+                Application.EnableVisualStyles();
+                //Application.Run(new MultiFormAppContext());
                 Application.Run(browser);
             }
 

@@ -1,4 +1,4 @@
-// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright Â© 2015 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -10,7 +10,7 @@
 
 namespace CefSharp
 {
-    namespace Internals
+    namespace BrowserSubprocess
     {
         namespace Async
         {
@@ -18,11 +18,11 @@ namespace CefSharp
             {
             private:
                 initonly List<JavascriptAsyncMethodWrapper^>^ _wrappedMethods;
-                Func<JavascriptAsyncMethodCallback^, int64>^ _methodCallbackSave;
+                Func<JavascriptAsyncMethodCallback^, int64_t>^ _methodCallbackSave;
                 JavascriptCallbackRegistry^ _callbackRegistry;
 
             public:
-                JavascriptAsyncObjectWrapper(JavascriptCallbackRegistry^ callbackRegistry, Func<JavascriptAsyncMethodCallback^, int64>^ saveMethod)
+                JavascriptAsyncObjectWrapper(JavascriptCallbackRegistry^ callbackRegistry, Func<JavascriptAsyncMethodCallback^, int64_t>^ saveMethod)
                     : _wrappedMethods(gcnew List<JavascriptAsyncMethodWrapper^>()), _methodCallbackSave(saveMethod), _callbackRegistry(callbackRegistry)
                 {
 
@@ -38,7 +38,7 @@ namespace CefSharp
                     }
                 }
 
-                void Bind(JavascriptObject^ object, const CefRefPtr<CefV8Value> &value, const CefRefPtr<CefV8Value> &promiseCreator);
+                void Bind(JavascriptObject^ object, const CefRefPtr<CefV8Value> &value);
             };
         }
     }

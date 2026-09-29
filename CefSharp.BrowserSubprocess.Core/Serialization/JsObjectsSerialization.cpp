@@ -1,15 +1,17 @@
-// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright Â© 2015 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "stdafx.h"
 #include "JsObjectsSerialization.h"
-#include "../CefSharp.Core/Internals/Serialization/Primitives.h"
-#include "../CefSharp.Core/Internals/Serialization/ObjectsSerialization.h"
+#include "../CefSharp.Core.Runtime/Internals/Serialization/Primitives.h"
+#include "../CefSharp.Core.Runtime/Internals/Serialization/ObjectsSerialization.h"
+
+using namespace CefSharp::Internals::Serialization;
 
 namespace CefSharp
 {
-    namespace Internals
+    namespace BrowserSubprocess
     {
         namespace Serialization
         {
@@ -68,7 +70,9 @@ namespace CefSharp
             {
                 auto result = gcnew List<JavascriptObject^>();
                 auto subList = list->GetList(index);
-                for (auto i = 0; i < subList->GetSize(); i++)
+                auto size = static_cast<int>(subList->GetSize());
+
+                for (int i = 0; i < size; i++)
                 {
                     result->Add(DeserializeJsObject(subList, i));
                 }

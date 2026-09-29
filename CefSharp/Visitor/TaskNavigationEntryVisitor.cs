@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2016 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -10,8 +10,8 @@ using CefSharp.Internals;
 namespace CefSharp
 {
     /// <summary>
-    /// A <see cref="INavigationEntryVisitor"/> that uses a TaskCompletionSource
-    /// to simplify things
+    /// A <see cref="INavigationEntryVisitor"/> implementation that uses a <see cref="TaskCompletionSource{TResult}"/>
+    /// that allows you to call await/ContinueWith to get the list of NavigationEntries
     /// </summary>
     public class TaskNavigationEntryVisitor : INavigationEntryVisitor
     {
@@ -19,14 +19,15 @@ namespace CefSharp
         private List<NavigationEntry> list;
 
         /// <summary>
-        /// Default constructor
+        /// Initializes a new instance of the TaskNavigationEntryVisitor class.
         /// </summary>
         public TaskNavigationEntryVisitor()
         {
-            taskCompletionSource = new TaskCompletionSource<List<NavigationEntry>>();
+            taskCompletionSource = new TaskCompletionSource<List<NavigationEntry>>(TaskCreationOptions.RunContinuationsAsynchronously);
             list = new List<NavigationEntry>();
         }
 
+        /// <inheritdoc/>
         bool INavigationEntryVisitor.Visit(NavigationEntry entry, bool current, int index, int total)
         {
             list.Add(entry);
@@ -34,12 +35,12 @@ namespace CefSharp
             return true;
         }
 
+        /// <inheritdoc/>
         void IDisposable.Dispose()
         {
-            if(list != null)
+            if (list != null)
             {
-                //Set the result on the ThreadPool so the Task continuation is not run on the CEF UI Thread
-                taskCompletionSource.TrySetResultAsync(list);
+                taskCompletionSource.TrySetResult(list);
             }
 
             list = null;

@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2017 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -8,7 +8,7 @@ namespace CefSharp
 {
     /// <summary>
     /// Interface to implement to be notified of asynchronous completion via ICookieManager.DeleteCookies().
-    /// It will be executed asnychronously on the CEF IO thread after the cookie has been deleted
+    /// It will be executed asynchronously on the CEF IO thread after the cookie has been deleted
     /// </summary>
     public interface IDeleteCookiesCallback : IDisposable
     {

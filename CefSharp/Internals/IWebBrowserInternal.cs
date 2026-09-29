@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -18,7 +18,8 @@ namespace CefSharp.Internals
         void SetLoadingStateChange(LoadingStateChangedEventArgs args);
         void SetTitle(TitleChangedEventArgs args);
         void SetTooltipText(string tooltipText);
-        void SetCanExecuteJavascriptOnMainFrame(bool canExecute);
+        void SetCanExecuteJavascriptOnMainFrame(string frameId, bool canExecute);
+        void SetJavascriptMessageReceived(JavascriptMessageReceivedEventArgs args);
 
         void OnFrameLoadStart(FrameLoadStartEventArgs args);
         void OnFrameLoadEnd(FrameLoadEndEventArgs args);
@@ -28,5 +29,7 @@ namespace CefSharp.Internals
 
         IBrowserAdapter BrowserAdapter { get; }
         bool HasParent { get; set; }
+
+        IDisposable DevToolsContext { get; set; }
     }
 }

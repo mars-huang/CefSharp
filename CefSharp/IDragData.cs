@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -17,7 +17,7 @@ namespace CefSharp
         /// <summary>
         /// Gets a copy of the current drag data
         /// </summary>
-        /// <returns></returns>
+        /// <returns>a clone of the current object</returns>
         IDragData Clone();
 
         /// <summary>
@@ -34,6 +34,11 @@ namespace CefSharp
         /// Retrieve the list of file names that are being dragged into the browser window
         /// </summary>
         IList<string> FileNames { get; }
+
+        /// <summary>
+        /// Retrieve the list of file paths that are being dragged into the browser window
+        /// </summary>
+        IList<string> FilePaths { get; }
 
         /// <summary>
         /// Return the base URL that the fragment came from. This value is used for resolving relative URLs and may be empty. 
@@ -118,6 +123,11 @@ namespace CefSharp
         /// size of the file contents in bytes.</param>
         /// <returns>Returns the number of bytes written to the stream</returns>
         Int64 GetFileContents(Stream stream);
+
+        /// <summary>
+        /// Clear list of filenames.
+        /// </summary>
+        void ClearFilenames();
 
         /// <summary>
         /// Gets a value indicating whether the object has been disposed of.

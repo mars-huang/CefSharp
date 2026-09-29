@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2010 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -22,7 +22,7 @@ namespace CefSharp.WinForms.Example
                 {
                     return Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().CodeBase);
                 }
-                
+
                 var titleAttribute = (AssemblyTitleAttribute)attributes[0];
                 return titleAttribute.Title != "" ? titleAttribute.Title : Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().CodeBase);
             }
@@ -77,7 +77,7 @@ namespace CefSharp.WinForms.Example
             InitializeComponent();
             ExecutingAssembly = Assembly.GetExecutingAssembly();
 
-            Text = "About CefTest";
+            Text = "About CefSharp.WinForms.Example";
             labelProductName.Text = AssemblyProduct;
             labelVersion.Text = String.Format("Version {0} ", Cef.CefSharpVersion);
             labelCopyright.Text = AssemblyCopyright;

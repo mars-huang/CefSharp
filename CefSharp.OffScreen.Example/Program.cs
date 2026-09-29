@@ -1,61 +1,95 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using CefSharp;
-using CefSharp.Example;
-using CefSharp.Example.Handlers;
-using CefSharp.Internals;
+using CefSharp.DevTools.Page;
 
 namespace CefSharp.OffScreen.Example
 {
     public class Program
     {
-        private const string TestUrl = "https://www.google.com/";
+        private const string TestUrlOne = "https://www.google.com/";
+        private const string TestUrlTwo = "https://github.com/";
+        private const string TestUrlThree = "https://www.google.com/doodles";
+        private const string TestUrlFour = "https://microsoft.com/";
 
         public static int Main(string[] args)
         {
-            Console.WriteLine("This example application will load {0}, take a screenshot, and save it to your desktop.", TestUrl);
+            Console.WriteLine("This example application will load {0}, take a screenshot, and save it to your desktop.", TestUrlOne);
             Console.WriteLine("You may see a lot of Chromium debugging output, please wait...");
             Console.WriteLine();
 
-            // You need to replace this with your own call to Cef.Initialize();
-            CefExample.Init(true, multiThreadedMessageLoop:true, browserProcessHandler: new BrowserProcessHandler());
+            //Console app doesn't have a message loop which we need as Cef.Initialize/Cef.Shutdown must be called on the same
+            //thread. We use a super simple SynchronizationContext implementation from
+            //https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
+            //Continuations will happen on the main thread
+            //The Nito.AsyncEx.Context Nuget package has a more advanced implementation
+            //https://github.com/StephenCleary/AsyncEx/blob/8a73d0467d40ca41f9f9cf827c7a35702243abb8/doc/AsyncContext.md#console-example-using-asynccontext
 
-            MainAsync("cachePath1", 1.0);
-            //Demo showing Zoom Level of 3.0
-            //Using seperate request contexts allows the urls from the same domain to have independent zoom levels
-            //otherwise they would be the same - default behaviour of Chromium
-            //MainAsync("cachePath2", 3.0);
+            AsyncContext.Run(async delegate
+            {
+                Cef.EnableWaitForBrowsersToClose();
 
-            // We have to wait for something, otherwise the process will exit too soon.
-            Console.ReadKey();
+                var settings = new CefSettings();
+                //The location where cache data will be stored on disk. If empty an in-memory cache will be used for some features and a temporary disk cache for others.
+                //HTML5 databases such as localStorage will only persist across sessions if a cache path is specified. 
+                settings.CachePath = Path.GetFullPath("cache");
 
-            // Clean up Chromium objects.  You need to call this in your application otherwise
-            // you will get a crash when closing.
-            Cef.Shutdown();
+                var success = await Cef.InitializeAsync(settings);
+
+                if (!success)
+                {
+                    return;
+                }
+
+                var t1 =  MainAsync(TestUrlOne, TestUrlTwo, "cache\\path1", 1.0);
+                //Demo showing Zoom Level of 2.0
+                //Using seperate request contexts allows the urls from the same domain to have independent zoom levels
+                //otherwise they would be the same - default behaviour of Chromium
+                var t2 = MainAsync(TestUrlThree, TestUrlFour, "cache\\path2", 2.0);
+
+                await Task.WhenAll(t1, t2);
+
+                Console.WriteLine("Image viewer launched.  Press any key to exit.");
+
+                // Wait for user input
+                Console.ReadKey();
+
+                //Wait until the browser has finished closing (which by default happens on a different thread).
+                //Cef.EnableWaitForBrowsersToClose(); must be called before Cef.Initialize to enable this feature
+                //See https://github.com/cefsharp/CefSharp/issues/3047 for details
+                Cef.WaitForBrowsersToClose();
+
+                // Clean up Chromium objects.  You need to call this in your application otherwise
+                // you will get a crash when closing.
+                Cef.Shutdown();
+            });
 
             //Success
             return 0;
         }
 
-        private static async void MainAsync(string cachePath, double zoomLevel)
+        private static async Task MainAsync(string url, string secondUrl, string cachePath, double zoomLevel)
         {
-            var browserSettings = new BrowserSettings();
-            //Reduce rendering speed to one frame per second so it's easier to take screen shots
-            browserSettings.WindowlessFrameRate = 1;
-            var requestContextSettings = new RequestContextSettings { CachePath = cachePath };
+            var browserSettings = new BrowserSettings
+            {
+                //Reduce rendering speed to one frame per second so it's easier to take screen shots
+                WindowlessFrameRate = 1
+            };
+
+            var requestContextSettings = new RequestContextSettings
+            {
+                CachePath = Path.GetFullPath(cachePath)
+            };
 
             // RequestContext can be shared between browser instances and allows for custom settings
             // e.g. CachePath
-            using(var requestContext = new RequestContext(requestContextSettings))
-            using (var browser = new ChromiumWebBrowser(TestUrl, browserSettings, requestContext))
+            using (var requestContext = new RequestContext(requestContextSettings))
+            using (var browser = new ChromiumWebBrowser(url, browserSettings, requestContext))
             {
                 if (zoomLevel > 1)
                 {
@@ -68,7 +102,7 @@ namespace CefSharp.OffScreen.Example
                         }
                     };
                 }
-                await LoadPageAsync(browser);
+                await browser.WaitForInitialLoadAsync();
 
                 //Check preferences on the CEF UI Thread
                 await Cef.UIThreadTaskFactory.StartNew(delegate
@@ -78,13 +112,16 @@ namespace CefSharp.OffScreen.Example
                     //Check do not track status
                     var doNotTrack = (bool)preferences["enable_do_not_track"];
 
-                    Debug.WriteLine("DoNotTrack:" + doNotTrack);
+                    Debug.WriteLine("DoNotTrack: " + doNotTrack);
                 });
 
                 var onUi = Cef.CurrentlyOnThread(CefThreadIds.TID_UI);
 
                 // For Google.com pre-pupulate the search text box
-                await browser.EvaluateScriptAsync("document.getElementById('lst-ib').value = 'CefSharp Was Here!'");
+                if (url.Contains("google.com"))
+                {
+                    await browser.EvaluateScriptAsync("document.querySelector('[name=q]').value = 'CefSharp Was Here!'");
+                }
 
                 //Example using SendKeyEvent for input instead of javascript
                 //var browserHost = browser.GetBrowserHost();
@@ -97,79 +134,74 @@ namespace CefSharp.OffScreen.Example
                 ////Give the browser a little time to finish drawing our SendKeyEvent input
                 //await Task.Delay(100);
 
+                var contentSize = await browser.GetContentSizeAsync();
+
+                var viewport = new Viewport
+                {
+                    Height = contentSize.Height,
+                    Width = contentSize.Width,
+                    Scale = 1.0
+                };
+
                 // Wait for the screenshot to be taken,
                 // if one exists ignore it, wait for a new one to make sure we have the most up to date
-                await browser.ScreenshotAsync(true).ContinueWith(DisplayBitmap);
+                var bitmap = await browser.CaptureScreenshotAsync(viewport:viewport);
 
-                await LoadPageAsync(browser, "http://github.com");
+                // Make a file to save it to (e.g. C:\Users\jan\Desktop\CefSharp screenshot.png)
+                var screenshotPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "CefSharp screenshot" + DateTime.Now.Ticks + ".png");
 
-                
-                //Gets a wrapper around the underlying CefBrowser instance
-                var cefBrowser = browser.GetBrowser();
+                Console.WriteLine();
+                Console.WriteLine("Screenshot ready. Saving to {0}", screenshotPath);
+
+                File.WriteAllBytes(screenshotPath, bitmap);
+
+                Console.WriteLine("Screenshot saved. Launching your default image viewer...");
+
+                // Tell Windows to launch the saved image.
+                Process.Start(new ProcessStartInfo(screenshotPath)
+                {
+                    // UseShellExecute is false by default on .NET Core.
+                    UseShellExecute = true
+                });
+
+                await browser.LoadUrlAsync(secondUrl);
+
                 // Gets a warpper around the CefBrowserHost instance
                 // You can perform a lot of low level browser operations using this interface
-                var cefHost = cefBrowser.GetHost();
+                var cefbrowserHost = browser.GetBrowserHost();                
 
                 //You can call Invalidate to redraw/refresh the image
-                cefHost.Invalidate(PaintElementType.View);
+                cefbrowserHost.Invalidate(PaintElementType.View);
 
-                // Wait for the screenshot to be taken.
-                await browser.ScreenshotAsync(true).ContinueWith(DisplayBitmap);
-            }
-        }
+                contentSize = await browser.GetContentSizeAsync();
 
-        public static Task LoadPageAsync(IWebBrowser browser, string address = null)
-        {
-            //If using .Net 4.6 then use TaskCreationOptions.RunContinuationsAsynchronously
-            //and switch to tcs.TrySetResult below - no need for the custom extension method
-            var tcs = new TaskCompletionSource<bool>();
-
-            EventHandler<LoadingStateChangedEventArgs> handler = null;
-            handler = (sender, args) =>
-            {
-                //Wait for while page to finish loading not just the first frame
-                if (!args.IsLoading)
+                viewport = new Viewport
                 {
-                    browser.LoadingStateChanged -= handler;
-                    //This is required when using a standard TaskCompletionSource
-                    //Extension method found in the CefSharp.Internals namespace
-                    tcs.TrySetResultAsync(true);
-                }
-            };
+                    Height = contentSize.Height,
+                    Width = contentSize.Width,
+                    Scale = 1.0
+                };
 
-            browser.LoadingStateChanged += handler;
+                // Wait for the screenshot to be taken,
+                // if one exists ignore it, wait for a new one to make sure we have the most up to date
+                bitmap = await browser.CaptureScreenshotAsync(viewport: viewport);
 
-            if (!string.IsNullOrEmpty(address))
-            {
-                browser.Load(address);
+                screenshotPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "CefSharp screenshot" + DateTime.Now.Ticks + ".png");
+
+                Console.WriteLine();
+                Console.WriteLine("Screenshot ready. Saving to {0}", screenshotPath);
+
+                File.WriteAllBytes(screenshotPath, bitmap);
+
+                Console.WriteLine("Screenshot saved. Launching your default image viewer...");
+
+                // Tell Windows to launch the saved image.
+                Process.Start(new ProcessStartInfo(screenshotPath)
+                {
+                    // UseShellExecute is false by default on .NET Core.
+                    UseShellExecute = true
+                });
             }
-            return tcs.Task;
-        }
-
-        private static void DisplayBitmap(Task<Bitmap> task)
-        {
-            // Make a file to save it to (e.g. C:\Users\jan\Desktop\CefSharp screenshot.png)
-            var screenshotPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "CefSharp screenshot" + DateTime.Now.Ticks + ".png");
-
-            Console.WriteLine();
-            Console.WriteLine("Screenshot ready. Saving to {0}", screenshotPath);
-
-            var bitmap = task.Result;
-
-            // Save the Bitmap to the path.
-            // The image type is auto-detected via the ".png" extension.
-            bitmap.Save(screenshotPath);
-
-            // We no longer need the Bitmap.
-            // Dispose it to avoid keeping the memory alive.  Especially important in 32-bit applications.
-            bitmap.Dispose();
-
-            Console.WriteLine("Screenshot saved.  Launching your default image viewer...");
-
-            // Tell Windows to launch the saved image.
-            Process.Start(screenshotPath);
-
-            Console.WriteLine("Image viewer launched.  Press any key to exit.");
         }
     }
 }

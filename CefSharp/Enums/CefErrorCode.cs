@@ -1,11 +1,11 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2013 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 namespace CefSharp
 {
     /// <summary>
-    /// Lists some of the error codes that can be reported by CEF.
+    /// This file contains the list of network errors.
     /// 
     /// For a complete up-to-date list, see the CEF source code
     /// (cef_errorcode_t in include/internal/cef_types.h)
@@ -17,6 +17,19 @@ namespace CefSharp
         /// No error occurred.
         /// </summary>
         None = 0,
+
+        //
+        // Ranges:
+        //     0- 99 System related errors
+        //   100-199 Connection related errors
+        //   200-299 Certificate errors
+        //   300-399 HTTP errors
+        //   400-499 Cache errors
+        //   500-599 ?
+        //   600-699 <Obsolete: FTP errors>
+        //   700-799 Certificate manager errors
+        //   800-899 DNS resolver errors
+        //   900-999 Blob errors
 
         /// <summary>
         /// An asynchronous IO operation is not yet complete.  This usually does not
@@ -32,7 +45,7 @@ namespace CefSharp
         Failed = -2,
 
         /// <summary>
-        /// A request was aborted, possibly by the user.
+        /// An operation was aborted (due to user action).
         /// </summary>
         Aborted = -3,
 
@@ -62,7 +75,8 @@ namespace CefSharp
         FileTooBig = -8,
 
         /// <summary>
-        /// An unexpected error. This may be caused by a programming mistake or an invalid assumption
+        /// An unexpected error.  This may be caused by a programming mistake or an
+        /// invalid assumption.
         /// </summary>
         Unexpected = -9,
 
@@ -128,7 +142,7 @@ namespace CefSharp
         NetworkChanged = -21,
 
         /// <summary>
-        /// The request was blocked by the URL blacklist configured by the domain
+        /// The request was blocked by the URL block list configured by the domain
         /// administrator.
         /// </summary>
         BlockedByAdministrator = -22,
@@ -138,12 +152,79 @@ namespace CefSharp
         /// </summary>
         SocketIsConnected = -23,
 
+        // Error -24 was removed (BLOCKED_ENROLLMENT_CHECK_PENDING)
+
         /// <summary>
-        /// The request was blocked because the forced reenrollment check is still
-        /// pending. This error can only occur on ChromeOS.
-        /// The error can be emitted by code in chrome/browser/policy/policy_helpers.cc.
+        /// The upload failed because the upload stream needed to be re-read, due to a
+        /// retry or a redirect, but the upload stream doesn't support that operation.
         /// </summary>
-        BlockedEnrollmentCheckPending = -24,
+        UploadStreamRewindNotSupported = -25,
+
+        /// <summary>
+        /// The request failed because the URLRequestContext is shutting down, or has
+        /// been shut down.
+        /// </summary>
+        ContextShutDown = -26,
+
+        /// <summary>
+        /// The request failed because the response was delivered along with requirements
+        /// which are not met ('X-Frame-Options' and 'Content-Security-Policy' ancestor
+        /// checks and 'Cross-Origin-Resource-Policy' for instance).
+        /// </summary>
+        BlockedByResponse = -27,
+
+        // Error -28 was removed (BLOCKED_BY_XSS_AUDITOR).
+
+        /// <summary>
+        /// The request was blocked by system policy disallowing some or all cleartext
+        /// requests. Used for NetworkSecurityPolicy on Android.
+        /// </summary>
+        CleartextNotPermitted = -29,
+
+        /// <summary>
+        /// The request was blocked by a Content Security Policy
+        /// </summary>
+        BlockedByCsp = -30,
+
+        // NET_ERROR(H2_OR_QUIC_REQUIRED, -31) was removed. It was:
+        // The request was blocked because of no H/2 or QUIC session.
+
+        /// <summary>
+        /// The request was blocked by CORB or ORB.
+        /// </summary>
+        BlockedByOrb = -32,
+
+        /// <summary>
+        /// The request was blocked because it originated from a frame that has disabled
+        /// network access.
+        /// </summary>
+        NetworkAccessRevoked = -33,
+
+        /// <summary>
+        /// The request was blocked by fingerprinting protections.
+        /// </summary>
+        BlockedByFingerprintingProtection = -34,
+
+        /// <summary>
+        /// The request was blocked by the Incognito Mode URL block list configured by
+        /// the domain administrator.
+        /// </summary>
+        BlockedInIncognitoByAdministrator = -35,
+
+        /// <summary>
+        /// The request was blocked because the local network permission is missing.
+        /// Note that this is different from BlockedByLocalNetworkAccessChecks
+        /// which is specifically for a CORS error code.
+        /// </summary>
+        LocalNetworkPermissionMissing = -36,
+
+        /// <summary>
+        /// The request was blocked because ECH is strictly required, but:
+        ///  - The client could not obtain a valid ECH configuration.
+        ///  - The server rejected the ECH, and the client failed to establish a new ECH
+        ///    connection after retrying with retry_configs.
+        /// </summary>
+        StrictEchRequired = -37,
 
         /// <summary>
         /// A connection was closed (corresponding to a TCP FIN).
@@ -187,12 +268,14 @@ namespace CefSharp
         SslProtocolError = -107,
 
         /// <summary>
-        /// The IP address or port number is invalid (e.g., cannot connect to the IP address 0 or the port 0).
+        /// The IP address or port number is invalid (e.g., cannot connect to the IP
+        /// address 0 or the port 0).
         /// </summary>
         AddressInvalid = -108,
 
         /// <summary>
-        /// The IP address is unreachable.  This usually means that there is no route to the specified host or network.
+        /// The IP address is unreachable.  This usually means that there is no route to
+        /// the specified host or network.
         /// </summary>
         AddressUnreachable = -109,
 
@@ -202,17 +285,17 @@ namespace CefSharp
         SslClientAuthCertNeeded = -110,
 
         /// <summary>
-        /// A tunnel connection through the proxy could not be established.
+        /// A tunnel connection through the proxy could not be established. For more info
+        /// see the comment on PROXY_UNABLE_TO_CONNECT_TO_DESTINATION.
         /// </summary>
         TunnelConnectionFailed = -111,
 
-        /// <summary>
-        /// No SSL protocol versions are enabled.
-        /// </summary>
-        NoSslVersionsEnabled = -112,
+        // Obsolete:
+        // NET_ERROR(NO_SSL_VERSIONS_ENABLED, -112)
 
         /// <summary>
-        /// The client and server don't support a common SSL protocol version or cipher suite.
+        /// The client and server don't support a common SSL protocol version or
+        /// cipher suite.
         /// </summary>
         SslVersionOrCipherMismatch = -113,
 
@@ -227,14 +310,7 @@ namespace CefSharp
         /// </summary>
         ProxyAuthUnsupported = -115,
 
-        /// <summary>
-        /// During SSL renegotiation (rehandshake), the server sent a certificate with
-        /// an error.
-        ///
-        /// Note: this error is not in the -2xx range so that it won't be handled as a
-        /// certificate error.
-        /// </summary>
-        CertErrorInSslRenegotiation = -116,
+        // Error -116 was removed (CERT_ERROR_IN_SSL_RENEGOTIATION)
 
         /// <summary>
         /// The SSL handshake failed because of a bad or missing client certificate.
@@ -266,7 +342,7 @@ namespace CefSharp
         /// <summary>
         /// The request to negotiate an alternate protocol failed.
         /// </summary>
-        NpnNegotiationFailed = -122,
+        AlpnNegotiationFailed = -122,
 
         /// <summary>
         /// The peer sent an SSL no_renegotiation alert message.
@@ -297,15 +373,7 @@ namespace CefSharp
         /// </summary>
         ProxyAuthRequested = -127,
 
-        /// <summary>
-        /// A known TLS strict server didn't offer the renegotiation extension.
-        /// </summary>
-        SslUnsafeNegotiation = -128,
-
-        /// <summary>
-        /// The SSL server attempted to use a weak ephemeral Diffie-Hellman key.
-        /// </summary>
-        SslWeakServerEphemeralDhKey = -129,
+        // Error -129 was removed (SSL_WEAK_SERVER_EPHEMERAL_DH_KEY).
 
         /// <summary>
         /// Could not create a connection to the proxy server. An error occurred
@@ -320,6 +388,8 @@ namespace CefSharp
         /// that a mandatory PAC script could not be fetched, parsed or executed.
         /// </summary>
         MandatoryProxyConfigurationFailed = -131,
+
+        // -132 was formerly ERR_ESET_ANTI_VIRUS_SSL_INTERCEPTION
 
         /// <summary>
         /// We've hit the max socket limit for the socket pool while preconnecting.  We
@@ -359,12 +429,9 @@ namespace CefSharp
         /// </summary>
         TemporarilyThrottled = -139,
 
-        /// <summary>
-        /// A request to create an SSL tunnel connection through the HTTPS proxy
-        /// received a non-200 (OK) and non-407 (Proxy Auth) response.  The response
-        /// body might include a description of why the request failed.
-        /// </summary>
-        HttpsProxyTunnelResponse = -140,
+        // Obsolete, since we now use the catch-all ERR_TUNNEL_CONNECTION_FAILED when a
+        // proxy tried to redirect a request.
+        // NET_ERROR(HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT, -140)
 
         /// <summary>
         /// We were unable to sign the CertificateVerify data of an SSL client auth
@@ -383,10 +450,9 @@ namespace CefSharp
         /// </summary>
         MsgTooBig = -142,
 
-        /// <summary>
-        /// A SPDY session already exists, and should be used instead of this connection.
-        /// </summary>
-        SpdySessionAlreadyExists = -143,
+        // Error -143 was removed (SPDY_SESSION_ALREADY_EXISTS)
+
+        // Error -144 was removed (LIMIT_VIOLATION).
 
         /// <summary>
         /// Websocket protocol error. Indicates that we are terminating the connection
@@ -394,26 +460,16 @@ namespace CefSharp
         /// </summary>
         WsProtocolError = -145,
 
-        /// <summary>
-        /// Connection was aborted for switching to another ptotocol.
-        /// WebSocket abort SocketStream connection when alternate protocol is found.
-        /// </summary>
-        ProtocolSwitched = -146,
+        // Error -146 was removed (PROTOCOL_SWITCHED)
 
         /// <summary>
         /// Returned when attempting to bind an address that is already in use.
         /// </summary>
         AddressInUse = -147,
 
-        /// <summary>
-        /// An operation failed because the SSL handshake has not completed.
-        /// </summary>
-        SslHandshakeNotCompleted = -148,
-
-        /// <summary>
-        /// SSL peer's public key is invalid.
-        /// </summary>
-        SslBadPeerPublicKey = -149,
+        // Obsolete:
+        // NET_ERROR(SSL_HANDSHAKE_NOT_COMPLETED, -148)
+        // NET_ERROR(SSL_BAD_PEER_PUBLIC_KEY, -149)
 
         /// <summary>
         /// The certificate didn't match the built-in public key pins for the host name.
@@ -427,11 +483,7 @@ namespace CefSharp
         /// </summary>
         ClientAuthCertTypeUnsupported = -151,
 
-        /// <summary>
-        /// Server requested one type of cert, then requested a different type while the
-        /// first was still being generated.
-        /// </summary>
-        OriginBoundCertGenerationTypeMismatch = -152,
+        // Error -152 was removed (ORIGIN_BOUND_CERT_GENERATION_TYPE_MISMATCH)
 
         /// <summary>
         /// An SSL peer sent us a fatal decrypt_error alert. This typically occurs when
@@ -446,27 +498,16 @@ namespace CefSharp
         /// </summary>
         WsThrottleQueueTooLarge = -154,
 
-        /// <summary>
-        /// There are too many active SocketStream instances, so the new connect request
-        /// was rejected.
-        /// </summary>
-        TooManySocketStreams = -155,
+        // Error -155 was removed (TOO_MANY_SOCKET_STREAMS)
 
         /// <summary>
         /// The SSL server certificate changed in a renegotiation.
         /// </summary>
         SslServerCertChanged = -156,
 
-        /// <summary>
-        /// The SSL server indicated that an unnecessary TLS version fallback was
-        /// performed.
-        /// </summary>
-        SslInappropriateFallback = -157,
+        // Error -157 was removed (SSL_INAPPROPRIATE_FALLBACK).
 
-        /// <summary>
-        /// Certificate Transparency: All Signed Certificate Timestamps failed to verify.
-        /// </summary>
-        CtNoSctsVerifiedOk = -158,
+        // Error -158 was removed (CT_NO_SCTS_VERIFIED_OK).
 
         /// <summary>
         /// The SSL server sent us a fatal unrecognized_name alert.
@@ -501,68 +542,264 @@ namespace CefSharp
         /// </summary>
         SslClientAuthCertBadFormat = -164,
 
+        // Error -165 was removed (SSL_FALLBACK_BEYOND_MINIMUM_VERSION).
+
         /// <summary>
-        /// The server responded with a certificate whose common name did not match the host name.
-        /// This could mean:
-        /// 1. An attacker has redirected our traffic to his server and is presenting a certificate
-        /// for which he knows the private key.
+        /// Resolving a hostname to an IP address list included the IPv4 address
+        /// "127.0.53.53". This is a special IP address which ICANN has recommended to
+        /// indicate there was a name collision, and alert admins to a potential
+        /// problem.
+        /// </summary>
+        ICANNNameCollision = -166,
+
+        /// <summary>
+        /// The SSL server presented a certificate which could not be decoded. This is
+        /// not a certificate error code as no X509Certificate object is available. This
+        /// error is fatal.
+        /// </summary>
+        SslServerCertBadFormat = -167,
+
+        /// <summary>
+        /// Certificate Transparency: Received a signed tree head that failed to parse.
+        /// </summary>
+        CtSthParsingFailed = -168,
+
+        /// <summary>
+        /// Certificate Transparency: Received a signed tree head whose JSON parsing was
+        /// OK but was missing some of the fields.
+        /// </summary>
+        CtSthIncomplete = -169,
+
+        /// <summary>
+        /// The attempt to reuse a connection to send proxy auth credentials failed
+        /// before the AuthController was used to generate credentials. The caller should
+        /// reuse the controller with a new connection. This error is only used
+        /// internally by the network stack.
+        /// </summary>
+        UnableToReuseConnectionForProxyAuth = -170,
+
+        /// <summary>
+        /// Certificate Transparency: Failed to parse the received consistency proof.
+        /// </summary>
+        CtConsistencyProofParsingFailed = -171,
+
+        /// <summary>
+        /// The SSL server required an unsupported cipher suite that has since been
+        /// removed. This error will temporarily be signaled on a fallback for one or two
+        /// releases immediately following a cipher suite's removal, after which the
+        /// fallback will be removed.
+        /// </summary>
+        SslObsoleteCipher = -172,
+
+        /// <summary>
+        /// When a WebSocket handshake is done successfully and the connection has been
+        /// upgraded, the URLRequest is cancelled with this error code.
+        /// </summary>
+        WsUpgrade = -173,
+
+        /// <summary>
+        /// Socket ReadIfReady support is not implemented. This error should not be user
+        /// visible, because the normal Read() method is used as a fallback.
+        /// </summary>
+        ReadIfReadyNotImplemented = -174,
+
+        // Error -175 was removed (SSL_VERSION_INTERFERENCE).
+
+        /// <summary>
+        /// No socket buffer space is available.
+        /// </summary>
+        NoBufferSpace = -176,
+
+        /// <summary>
+        /// There were no common signature algorithms between our client certificate
+        /// private key and the server's preferences.
+        /// </summary>
+        SslClientAuthNoCommonAlgorithms = -177,
+
+        /// <summary>
+        /// TLS 1.3 early data was rejected by the server. This will be received before
+        /// any data is returned from the socket. The request should be retried with
+        /// early data disabled.
+        /// </summary>
+        EarlyDataRejected = -178,
+
+        /// <summary>
+        /// TLS 1.3 early data was offered, but the server responded with TLS 1.2 or
+        /// earlier. This is an internal error code to account for a
+        /// backwards-compatibility issue with early data and TLS 1.2. It will be
+        /// received before any data is returned from the socket. The request should be
+        /// retried with early data disabled.
+        ///
+        /// See https://tools.ietf.org/html/rfc8446#appendix-D.3 for details.
+        /// </summary>
+        WrongVersionOnEarlyData = -179,
+
+        /// <summary>
+        /// TLS 1.3 was enabled, but a lower version was negotiated and the server
+        /// returned a value indicating it supported TLS 1.3. This is part of a security
+        /// check in TLS 1.3, but it may also indicate the user is behind a buggy
+        /// TLS-terminating proxy which implemented TLS 1.2 incorrectly. (See
+        /// https://crbug.com/boringssl/226.)
+        /// </summary>
+        Tls13DowngradeDetected = -180,
+
+        /// <summary>
+        /// The server's certificate has a keyUsage extension incompatible with the
+        /// negotiated TLS key exchange method.
+        /// </summary>
+        SslKeyUsageIncompatible = -181,
+
+        /// <summary>
+        /// The ECHConfigList fetched over DNS cannot be parsed.
+        /// </summary>
+        InvalidEchConfigList = -182,
+
+        /// <summary>
+        /// ECH was enabled, but the server was unable to decrypt the encrypted
+        /// ClientHello.
+        /// </summary>
+        EchNotNegotiated = -183,
+
+        /// <summary>
+        /// ECH was enabled, the server was unable to decrypt the encrypted ClientHello,
+        /// and additionally did not present a certificate valid for the public name.
+        /// </summary>
+        EchFallbackCertificateInvalid = -184,
+
+        // Error -185 was removed (PROXY_TUNNEL_REQUEST_FAILED).
+
+        /// <summary>
+        /// An attempt to proxy a request failed because the proxy wasn't able to
+        /// successfully connect to the destination. This likely indicates an issue with
+        /// the request itself (for instance, the hostname failed to resolve to an IP
+        /// address or the destination server refused the connection). This error code
+        /// is used to indicate that the error is outside the control of the proxy server
+        /// and thus the proxy chain should not be marked as bad. This is in contrast to
+        /// ERR_TUNNEL_CONNECTION_FAILED which is used for general purpose errors
+        /// connecting to the proxy and by the proxy request response handling when a
+        /// proxy delegate doesn't indicate via a different error code whether proxy
+        /// fallback should occur. Note that for IP Protection proxies this error code
+        /// causes the proxy to be marked as bad since the preference is to fail open for
+        /// general purpose errors, but for other proxies this error does not cause the
+        /// proxy to be marked as bad.
+        /// </summary>
+        ProxyUnableToConnectToDestination = -186,
+
+        /// <summary>
+        /// Some implementations of ProxyDelegate query a separate entity to know whether
+        /// it should cancel tunnel prior to:
+        /// - The HTTP CONNECT requests being sent out
+        /// - The HTTP CONNECT response being parsed by //net
+        /// An example is CronetProxyDelegate: Cronet allows developers to decide whether
+        /// the tunnel being established should be canceled.
+        /// </summary>
+        ProxyDelegateCanceledConnectRequest = -187,
+
+        ProxyDelegateCanceledConnectResponse = -188,
+
+        /// <summary>
+        /// The control message was too large for the transport. (for example a UDP
+        /// message control data exceeds size threshold).
+        /// </summary>
+        ControlMsgTooBig = -189,
+
+        // Certificate error codes
+        //
+        // The values of certificate error codes must be consecutive.
+
+        /// <summary>
+        /// The server responded with a certificate whose common name did not match
+        /// the host name.  This could mean:
+        ///
+        /// 1. An attacker has redirected our traffic to their server and is
+        ///    presenting a certificate for which they know the private key.
+        ///
         /// 2. The server is misconfigured and responding with the wrong cert.
-        /// 3. The user is on a wireless network and is being redirected to the network's login page.
-        /// 4. The OS has used a DNS search suffix and the server doesn't have a certificate for the
-        /// abbreviated name in the address bar.
+        ///
+        /// 3. The user is on a wireless network and is being redirected to the
+        ///    network's login page.
+        ///
+        /// 4. The OS has used a DNS search suffix and the server doesn't have
+        ///    a certificate for the abbreviated name in the address bar.
+        ///
         /// </summary>
         CertCommonNameInvalid = -200,
 
         /// <summary>
-        /// The server responded with a certificate that, by our clock, appears to either not yet be valid or to have expired.
-        /// This could mean:
-        /// 1. An attacker is presenting an old certificate for which he has managed to obtain the private key
+        /// The server responded with a certificate that, by our clock, appears to
+        /// either not yet be valid or to have expired.  This could mean:
+        ///
+        /// 1. An attacker is presenting an old certificate for which they have
+        ///    managed to obtain the private key.
+        ///
         /// 2. The server is misconfigured and is not presenting a valid cert.
+        ///
         /// 3. Our clock is wrong.
+        ///
         /// </summary>
         CertDateInvalid = -201,
 
         /// <summary>
-        /// The server responded with a certificate that is signed by an authority we don't trust.
-        /// The could mean:
+        /// The server responded with a certificate that is signed by an authority
+        /// we don't trust.  The could mean:
+        ///
         /// 1. An attacker has substituted the real certificate for a cert that
-        /// contains his public key and is signed by his cousin.
-        /// 2. The server operator has a legitimate certificate from a CA we don't know about, but should trust.
-        /// 3. The server is presenting a self-signed certificate, providing no defense against active attackers (but foiling passive attackers).
+        ///    contains their public key and is signed by their cousin.
+        ///
+        /// 2. The server operator has a legitimate certificate from a CA we don't
+        ///    know about, but should trust.
+        ///
+        /// 3. The server is presenting a self-signed certificate, providing no
+        ///    defense against active attackers (but foiling passive attackers).
+        ///
         /// </summary>
         CertAuthorityInvalid = -202,
 
         /// <summary>
-        /// The server responded with a certificate that contains errors. This error is not recoverable.
+        /// The server responded with a certificate that contains errors.
+        /// This error is not recoverable.
+        ///
         /// MSDN describes this error as follows:
-        /// "The SSL certificate contains errors."
+        ///   "The SSL certificate contains errors."
         /// NOTE: It's unclear how this differs from ERR_CERT_INVALID. For consistency,
         /// use that code instead of this one from now on.
+        ///
         /// </summary>
         CertContainsErrors = -203,
 
         /// <summary>
-        /// The certificate has no mechanism for determining if it is revoked.  In effect, this certificate cannot be revoked.
+        /// The certificate has no mechanism for determining if it is revoked.  In
+        /// effect, this certificate cannot be revoked.
         /// </summary>
         CertNoRevocationMechanism = -204,
 
         /// <summary>
-        /// Revocation information for the security certificate for this site is not available.
-        /// This could mean:
-        /// 1. An attacker has compromised the private key in the certificate and is blocking our attempt to
-        /// find out that the cert was revoked.
-        /// 2. The certificate is unrevoked, but the revocation server is busy or unavailable.
+        /// Revocation information for the security certificate for this site is not
+        /// available.  This could mean:
+        ///
+        /// 1. An attacker has compromised the private key in the certificate and is
+        ///    blocking our attempt to find out that the cert was revoked.
+        ///
+        /// 2. The certificate is unrevoked, but the revocation server is busy or
+        ///    unavailable.
+        ///
         /// </summary>
         CertUnableToCheckRevocation = -205,
 
         /// <summary>
         /// The server responded with a certificate has been revoked.
-        /// We have the capability to ignore this error, but it is probably not the thing to do.
+        /// We have the capability to ignore this error, but it is probably not the
+        /// thing to do.
         /// </summary>
         CertRevoked = -206,
 
         /// <summary>
-        /// The server responded with a certificate that is invalid. This error is not recoverable.
+        /// The server responded with a certificate that is invalid.
+        /// This error is not recoverable.
+        ///
+        /// MSDN describes this error as follows:
+        ///   "The SSL certificate is invalid."
+        ///
         /// </summary>
         CertInvalid = -207,
 
@@ -571,6 +808,8 @@ namespace CefSharp
         /// signature algorithm.
         /// </summary>
         CertWeakSignatureAlgorithm = -208,
+
+        // -209 is available: was CERT_NOT_IN_DNS.
 
         /// <summary>
         /// The host name specified in the certificate is not unique.
@@ -589,14 +828,45 @@ namespace CefSharp
         CertNameConstraintViolation = -212,
 
         /// <summary>
-        /// Add new certificate error codes here.
-        ///
-        /// Update the value of CERT_END whenever you add a new certificate error
-        /// code.
-        ///
+        /// The certificate's validity period is too long.
+        /// </summary>
+        CertValidityTooLong = -213,
+
+        /// <summary>
+        /// Certificate Transparency was required for this connection, but the server
+        /// did not provide CT information that complied with the policy.
+        /// </summary>
+        CertificateTransparencyRequired = -214,
+
+        // Error -215 was removed (CERT_SYMANTEC_LEGACY)
+
+        // -216 was QUIC_CERT_ROOT_NOT_KNOWN which has been renumbered to not be in the
+        // certificate error range.
+
+        /// <summary>
+        /// The certificate is known to be used for interception by an entity other
+        /// the device owner.
+        /// </summary>
+        CertKnownInterceptionBlocked = -217,
+
+        // -218 was SSL_OBSOLETE_VERSION which is not longer used. TLS 1.0/1.1 instead
+        // cause SSL_VERSION_OR_CIPHER_MISMATCH now.
+
+        /// <summary>
+        /// The certificate is self signed and it's being used for either an RFC1918 IP
+        /// literal URL, or a url ending in .local.
+        /// </summary>
+        CertSelfSignedLocalNetwork = -219,
+
+        // Add new certificate error codes here.
+        //
+        // Update the value of CERT_END whenever you add a new certificate error
+        // code.
+
+        /// <summary>
         /// The value immediately past the last certificate error code.
         /// </summary>
-        CertEnd = -213,
+        CertEnd = -220,
 
         /// <summary>
         /// The URL is invalid.
@@ -614,12 +884,18 @@ namespace CefSharp
         UnknownUrlScheme = -302,
 
         /// <summary>
+        /// Attempting to load an URL resulted in a redirect to an invalid URL.
+        /// </summary>
+        InvalidRedirect = -303,
+
+        /// <summary>
         /// Attempting to load an URL resulted in too many redirects.
         /// </summary>
         TooManyRedirects = -310,
 
         /// <summary>
-        /// Attempting to load an URL resulted in an unsafe redirect (e.g., a redirect to file:// is considered unsafe).
+        /// Attempting to load an URL resulted in an unsafe redirect (e.g., a redirect
+        /// to file:// is considered unsafe).
         /// </summary>
         UnsafeRedirect = -311,
 
@@ -647,7 +923,8 @@ namespace CefSharp
         MethodNotSupported = -322,
 
         /// <summary>
-        /// The response was 407 (Proxy Authentication Required), yet we did not send the request to a proxy.
+        /// The response was 407 (Proxy Authentication Required), yet we did not send
+        /// the request to a proxy.
         /// </summary>
         UnexpectedProxyAuth = -323,
 
@@ -661,10 +938,7 @@ namespace CefSharp
         /// </summary>
         ResponseHeadersTooBig = -325,
 
-        /// <summary>
-        /// The PAC requested by HTTP did not have a valid status code (non-200).
-        /// </summary>
-        PacStatusNotOk = -326,
+        // Error -326 was removed (PAC_STATUS_NOT_OK)
 
         /// <summary>
         /// The evaluation of the PAC script failed.
@@ -693,25 +967,15 @@ namespace CefSharp
         /// </summary>
         NetworkIoSuspended = -331,
 
-        /// <summary>
-        /// FLIP data received without receiving a SYN_REPLY on the stream.
-        /// </summary>
-        SynReplyNotReceived = -332,
+        // Obsolete. This was in earlier SPDY implementations.
+        // NET_ERROR(SYN_REPLY_NOT_RECEIVED, -332)
 
-        /// <summary>
-        /// Converting the response to target encoding failed.
-        /// </summary>
-        EncodingConversionFailed = -333,
+        // Obsolete. These were both used for FTP, which is no longer supported.
+        // NET_ERROR(ENCODING_CONVERSION_FAILED, -333)
+        // NET_ERROR(UNRECOGNIZED_FTP_DIRECTORY_LISTING_FORMAT, -334)
 
-        /// <summary>
-        /// The server sent an FTP directory listing in a format we do not understand.
-        /// </summary>
-        UnrecognizedFtpDirectoryListingFormat = -334,
-
-        /// <summary>
-        /// Attempted use of an unknown SPDY stream id.
-        /// </summary>
-        InvalidSpdyStream = -335,
+        // Obsolete. Was only logged in NetLog when an HTTP/2 pushed stream expired.
+        // NET_ERROR(INVALID_SPDY_STREAM, -335)
 
         /// <summary>
         /// There are no supported proxies in the provided list.
@@ -719,9 +983,9 @@ namespace CefSharp
         NoSupportedProxies = -336,
 
         /// <summary>
-        /// There is a SPDY protocol error.
+        /// There is an HTTP/2 protocol error.
         /// </summary>
-        SpdyProtocolError = -337,
+        Http2ProtocolError = -337,
 
         /// <summary>
         /// Credentials could not be established during HTTP Authentication.
@@ -771,10 +1035,10 @@ namespace CefSharp
         ResponseHeadersMultipleContentLength = -346,
 
         /// <summary>
-        /// SPDY Headers have been received, but not all of them - status or version
+        /// HTTP/2 headers have been received, but not all of them - status or version
         /// headers are missing, so we're expecting additional frames to complete them.
         /// </summary>
-        IncompleteSpdyHeaders = -347,
+        IncompleteHttp2Headers = -347,
 
         /// <summary>
         /// No PAC URL configuration could be retrieved from DHCP. This can indicate
@@ -794,15 +1058,22 @@ namespace CefSharp
         ResponseHeadersMultipleLocation = -350,
 
         /// <summary>
-        /// SPDY server refused the stream. Client should retry. This should never be a
-        /// user-visible error.
+        /// HTTP/2 server refused the request without processing, and sent either a
+        /// GOAWAY frame with error code NO_ERROR and Last-Stream-ID lower than the
+        /// stream id corresponding to the request indicating that this request has not
+        /// been processed yet, or a RST_STREAM frame with error code REFUSED_STREAM.
+        /// Client MAY retry (on a different connection).  See RFC7540 Section 8.1.4.
         /// </summary>
-        SpdyServerRefusedStream = -351,
+        Http2ServerRefusedStream = -351,
 
         /// <summary>
-        /// SPDY server didn't respond to the PING message.
+        /// HTTP/2 server didn't respond to the PING message.
         /// </summary>
-        SpdyPingFailed = -352,
+        Http2PingFailed = -352,
+
+        // Obsolete.  Kept here to avoid reuse, as the old error can still appear on
+        // histograms.
+        // NET_ERROR(PIPELINE_EVICTION, -353)
 
         /// <summary>
         /// The HTTP response body transferred fewer bytes than were advertised by the
@@ -827,40 +1098,166 @@ namespace CefSharp
         ResponseHeadersTruncated = -357,
 
         /// <summary>
-        /// The QUIC crytpo handshake failed.  This means that the server was unable
+        /// The QUIC crypto handshake failed.  This means that the server was unable
         /// to read any requests sent, so they may be resent.
         /// </summary>
         QuicHandshakeFailed = -358,
 
-        /// <summary>
-        /// An https resource was requested over an insecure QUIC connection.
-        /// </summary>
-        RequestForSecureResourceOverInsecureQuic = -359,
+        // Obsolete.  Kept here to avoid reuse, as the old error can still appear on
+        // histograms.
+        // NET_ERROR(REQUEST_FOR_SECURE_RESOURCE_OVER_INSECURE_QUIC, -359)
 
         /// <summary>
-        /// Transport security is inadequate for the SPDY version.
+        /// Transport security is inadequate for the HTTP/2 version.
         /// </summary>
-        SpdyInadequateTransportSecurity = -360,
+        Http2InadequateTransportSecurity = -360,
 
         /// <summary>
-        /// The peer violated SPDY flow control.
+        /// The peer violated HTTP/2 flow control.
         /// </summary>
-        SpdyFlowControlError = -361,
+        Http2FlowControlError = -361,
 
         /// <summary>
-        /// The peer sent an improperly sized SPDY frame.
+        /// The peer sent an improperly sized HTTP/2 frame.
         /// </summary>
-        SpdyFrameSizeError = -362,
+        Http2FrameSizeError = -362,
 
         /// <summary>
-        /// Decoding or encoding of compressed SPDY headers failed.
+        /// Decoding or encoding of compressed HTTP/2 headers failed.
         /// </summary>
-        SpdyCompressionError = -363,
+        Http2CompressionError = -363,
 
         /// <summary>
         /// Proxy Auth Requested without a valid Client Socket Handle.
         /// </summary>
         ProxyAuthRequestedWithNoConnection = -364,
+
+        /// <summary>
+        /// HTTP_1_1_REQUIRED error code received on HTTP/2 session.
+        /// </summary>
+        Http11Required = -365,
+
+        /// <summary>
+        /// HTTP_1_1_REQUIRED error code received on HTTP/2 session to proxy.
+        /// </summary>
+        ProxyHttp11Required = -366,
+
+        /// <summary>
+        /// The PAC script terminated fatally and must be reloaded.
+        /// </summary>
+        PacScriptTerminated = -367,
+
+        // Obsolete. Support for CNAME record detection was never fully implemented and
+        // is no longer needed since the IP Protection feature didn't launch.
+        // NET_ERROR(PROXY_REQUIRED, -368)
+
+        // Obsolete. Kept here to avoid reuse.
+        // Request is throttled because of a Backoff header.
+        // See: crbug.com/486891.
+        // NET_ERROR(TEMPORARY_BACKOFF, -369)
+
+        /// <summary>
+        /// The server was expected to return an HTTP/1.x response, but did not. Rather
+        /// than treat it as HTTP/0.9, this error is returned.
+        /// </summary>
+        InvalidHttpResponse = -370,
+
+        /// <summary>
+        /// Initializing content decoding failed.
+        /// </summary>
+        ContentDecodingInitFailed = -371,
+
+        /// <summary>
+        /// Received HTTP/2 RST_STREAM frame with NO_ERROR error code.  This error should
+        /// be handled internally by HTTP/2 code, and should not make it above the
+        /// SpdyStream layer.
+        /// </summary>
+        Http2RstStreamNoErrorReceived = -372,
+
+        // Obsolete. HTTP/2 push is removed.
+        // NET_ERROR(HTTP2_PUSHED_STREAM_NOT_AVAILABLE, -373)
+
+        // Obsolete. HTTP/2 push is removed.
+        // NET_ERROR(HTTP2_CLAIMED_PUSHED_STREAM_RESET_BY_SERVER, -374)
+
+        /// <summary>
+        /// An HTTP transaction was retried too many times due for authentication or
+        /// invalid certificates. This may be due to a bug in the net stack that would
+        /// otherwise infinite loop, or if the server or proxy continually requests fresh
+        /// credentials or presents a fresh invalid certificate.
+        /// </summary>
+        TooManyRetries = -375,
+
+        /// <summary>
+        /// Received an HTTP/2 frame on a closed stream.
+        /// </summary>
+        Http2StreamClosed = -376,
+
+        // Obsolete. HTTP/2 push is removed.
+        // NET_ERROR(HTTP2_CLIENT_REFUSED_STREAM, -377)
+
+        // Obsolete. HTTP/2 push is removed.
+        // NET_ERROR(HTTP2_PUSHED_RESPONSE_DOES_NOT_MATCH, -378)
+
+        /// <summary>
+        /// The server returned a non-2xx HTTP response code.
+        ///
+        /// Note that this error is only used by certain APIs that interpret the HTTP
+        /// response itself. URLRequest for instance just passes most non-2xx
+        /// response back as success.
+        /// </summary>
+        HttpResponseCodeFailure = -379,
+
+        /// <summary>
+        /// The certificate presented on a QUIC connection does not chain to a known root
+        /// and the origin connected to is not on a list of domains where unknown roots
+        /// are allowed.
+        /// </summary>
+        QuicCertRootNotKnown = -380,
+
+        /// <summary>
+        /// A GOAWAY frame has been received indicating that the request has not been
+        /// processed and is therefore safe to retry on a different connection.
+        /// </summary>
+        QuicGoawayRequestCanBeRetried = -381,
+
+        /// <summary>
+        /// The ACCEPT_CH restart has been triggered too many times
+        /// </summary>
+        TooManyAcceptChRestarts = -382,
+
+        /// <summary>
+        /// The IP address space of the remote endpoint differed from the previous
+        /// observed value during the same request. Any cache entry for the affected
+        /// request should be invalidated.
+        /// </summary>
+        InconsistentIpAddressSpace = -383,
+
+        /// <summary>
+        /// The IP address space of the cached remote endpoint is blocked by private
+        /// network access check.
+        /// </summary>
+        CachedIpAddressSpaceBlockedByLocalNetworkAccessPolicy = -384,
+
+        /// <summary>
+        /// The connection is blocked by private network access checks.
+        /// </summary>
+        BlockedByLocalNetworkAccessChecks = -385,
+
+        /// <summary>
+        /// Content decoding failed due to the zstd window size being too big (over 8MB).
+        /// </summary>
+        ZstdWindowSizeTooBig = -386,
+
+        /// <summary>
+        /// The compression dictionary cannot be loaded.
+        /// </summary>
+        DictionaryLoadFailed = -387,
+
+        /// <summary>
+        /// The header of dictionary compressed stream does not match the expected value.
+        /// </summary>
+        UnexpectedContentDictionaryHeader = -388,
 
         /// <summary>
         /// The cache does not have the requested entry.
@@ -921,65 +1318,96 @@ namespace CefSharp
         CacheLockTimeout = -409,
 
         /// <summary>
+        /// Received a challenge after the transaction has read some data, and the
+        /// credentials aren't available.  There isn't a way to get them at that point.
+        /// </summary>
+        CacheAuthFailureAfterRead = -410,
+
+        /// <summary>
+        /// Internal not-quite error code for the HTTP cache. In-memory hints suggest
+        /// that the cache entry would not have been usable with the transaction's
+        /// current configuration (e.g. load flags, mode, etc.)
+        /// </summary>
+        CacheEntryNotSuitable = -411,
+
+        /// <summary>
+        /// The disk cache is unable to doom this entry.
+        /// </summary>
+        CacheDoomFailure = -412,
+
+        /// <summary>
+        /// The disk cache is unable to open or create this entry.
+        /// </summary>
+        CacheOpenOrCreateFailure = -413,
+
+        /// <summary>
+        /// Zstd compression of a cache entry body failed.
+        /// </summary>
+        CacheCompressionFailure = -414,
+
+        /// <summary>
         /// The server's response was insecure (e.g. there was a cert error).
         /// </summary>
         InsecureResponse = -501,
 
         /// <summary>
-        /// The server responded to a &lt;keygen&gt; with a generated client cert that we
-        /// don't have the matching private key for.
+        /// An attempt to import a client certificate failed, as the user's key
+        /// database lacked a corresponding private key.
         /// </summary>
         NoPrivateKeyForCert = -502,
 
         /// <summary>
-        /// An error adding to the OS certificate database (e.g. OS X Keychain).
+        /// An error adding a certificate to the OS certificate database.
         /// </summary>
         AddUserCertFailed = -503,
 
         /// <summary>
-        /// A generic error for failed FTP control connection command.
-        /// If possible, please use or add a more specific error code.
+        /// An error occurred while handling a signed exchange.
         /// </summary>
-        FtpFailed = -601,
+        InvalidSignedExchange = -504,
 
         /// <summary>
-        /// The server cannot fulfill the request at this point. This is a temporary
-        /// error.
-        /// FTP response code 421.
+        /// An error occurred while handling a Web Bundle source.
         /// </summary>
-        FtpServiceUnavailable = -602,
+        InvalidWebBundle = -505,
 
         /// <summary>
-        /// The server has aborted the transfer.
-        /// FTP response code 426.
+        /// A Trust Tokens protocol operation-executing request failed for one of a
+        /// number of reasons (precondition failure, internal error, bad response).
         /// </summary>
-        FtpTransferAborted = -603,
+        TrustTokenOperationFailed = -506,
 
         /// <summary>
-        /// The file is busy, or some other temporary error condition on opening
-        /// the file.
-        /// FTP response code 450.
+        /// When handling a Trust Tokens protocol operation-executing request, the system
+        /// was able to execute the request's Trust Tokens operation without sending the
+        /// request to its destination: for instance, the results could have been present
+        /// in a local cache (for redemption) or the operation could have been diverted
+        /// to a local provider (for "platform-provided" issuance).
         /// </summary>
-        FtpFileBusy = -604,
+        TrustTokenOperationSuccessWithoutSendingRequest = -507,
 
         /// <summary>
-        /// Server rejected our command because of syntax errors.
-        /// FTP response codes 500, 501.
+        /// This is a placeholder value that should never be used within //net.
+        ///
+        /// When Cronet APIs are being backed by HttpEngine (i.e., HttpEngineProvider is
+        /// being used), org.chromium.net.NetworkException#getCronetInternalErrorCode is
+        /// not supported (android.net.http.NetworkException#getCronetInternalErrorCode
+        /// does not exist). In this scenario, getCronetInternalErrorCode will always
+        /// return this error. This is a first step towards the deprecation of
+        /// getCronetInternalErrorCode.
+        ///
+        /// Temporarily terminate, then restart, ITTT to avoid unsupported nesting.
         /// </summary>
-        FtpSyntaxError = -605,
+        HttpEngineProviderInUse = -508,
 
-        /// <summary>
-        /// Server does not support the command we issued.
-        /// FTP response codes 502, 504.
-        /// </summary>
-        FtpCommandNotSupported = -606,
-
-        /// <summary>
-        /// Server rejected our command because we didn't issue the commands in right
-        /// order.
-        /// FTP response code 503.
-        /// </summary>
-        FtpBadCommandSequence = -607,
+        // *** Code -600 is reserved (was FTP_PASV_COMMAND_FAILED). ***
+        // *** Code -601 is reserved (was FTP_FAILED). ***
+        // *** Code -602 is reserved (was FTP_SERVICE_UNAVAILABLE). ***
+        // *** Code -603 is reserved (was FTP_TRANSFER_ABORTED). ***
+        // *** Code -604 is reserved (was FTP_FILE_BUSY). ***
+        // *** Code -605 is reserved (was FTP_SYNTAX_ERROR). ***
+        // *** Code -606 is reserved (was FTP_COMMAND_NOT_SUPPORTED). ***
+        // *** Code -607 is reserved (was FTP_BAD_COMMAND_SEQUENCE). ***
 
         /// <summary>
         /// PKCS #12 import failed due to incorrect password.
@@ -1033,10 +1461,7 @@ namespace CefSharp
         /// </summary>
         KeyGenerationFailed = -710,
 
-        /// <summary>
-        /// Server-bound certificate generation failed.
-        /// </summary>
-        OriginBoundCertGenerationFailed = -711,
+        // Error -711 was removed (ORIGIN_BOUND_CERT_GENERATION_FAILED)
 
         /// <summary>
         /// Failure to export private key.
@@ -1053,10 +1478,14 @@ namespace CefSharp
         /// </summary>
         CertDatabaseChanged = -714,
 
+        // Error -715 was removed (CHANNEL_ID_IMPORT_FAILED)
+
         /// <summary>
-        /// Failure to import Channel ID.
+        /// The certificate verifier configuration changed in some way.
         /// </summary>
-        ChannelIdImportFailed = -715,
+        CertVerifierChanged = -716,
+
+        // DNS error codes.
 
         /// <summary>
         /// DNS resolver received a malformed response.
@@ -1068,18 +1497,7 @@ namespace CefSharp
         /// </summary>
         DnsServerRequiresTcp = -801,
 
-        /// <summary>
-        /// DNS server failed.  This error is returned for all of the following
-        /// error conditions:
-        /// 1 - Format error - The name server was unable to interpret the query.
-        /// 2 - Server failure - The name server was unable to process this query
-        ///     due to a problem with the name server.
-        /// 4 - Not Implemented - The name server does not support the requested
-        ///     kind of query.
-        /// 5 - Refused - The name server refuses to perform the specified
-        ///     operation for policy reasons.
-        /// </summary>
-        DnsServerFailed = -802,
+        // Error -802 was removed (DNS_SERVER_FAILED)
 
         /// <summary>
         /// DNS transaction timed out.
@@ -1087,7 +1505,10 @@ namespace CefSharp
         DnsTimedOut = -803,
 
         /// <summary>
-        /// The entry was not found in cache, for cache-only lookups.
+        /// The entry was not found in cache or other local sources, for lookups where
+        /// only local sources were queried.
+        /// TODO(ericorth): Consider renaming to DNS_LOCAL_MISS or something like that as
+        /// the cache is not necessarily queried either.
         /// </summary>
         DnsCacheMiss = -804,
 
@@ -1099,6 +1520,128 @@ namespace CefSharp
         /// <summary>
         /// Failed to sort addresses according to RFC3484.
         /// </summary>
-        DnsSortError = -806
+        DnsSortError = -806,
+
+        // Error -807 was removed (DNS_HTTP_FAILED)
+
+        /// <summary>
+        /// Failed to resolve the hostname of a DNS-over-HTTPS server.
+        /// </summary>
+        DnsSecureResolverHostnameResolutionFailed = -808,
+
+        /// <summary>
+        /// DNS identified the request as disallowed for insecure connection (http/ws).
+        /// Error should be handled as if an HTTP redirect was received to redirect to
+        /// https or wss.
+        /// </summary>
+        DnsNameHttpsOnly = -809,
+
+        /// <summary>
+        /// All DNS requests associated with this job have been cancelled.
+        /// </summary>
+        DnsRequestCancelled = -810,
+
+        /// <summary>
+        /// The hostname resolution of HTTPS record was expected to be resolved with
+        /// alpn values of supported protocols, but did not.
+        /// </summary>
+        DnsNoMatchingSupportedAlpn = -811,
+
+        // Error -812 was removed
+        // Error -813 was removed
+
+        /// <summary>
+        /// When checking whether secure DNS can be used, the response returned for the
+        /// requested probe record either had no answer or was invalid.
+        /// </summary>
+        DnsSecureProbeRecordInvalid = -814,
+
+        /// <summary>
+        /// Returned when DNS cache invalidation is in progress. This is a
+        /// transient error. Callers may want to retry later.
+        /// </summary>
+        DnsCacheInvalidationInProgress = -815,
+
+        /// <summary>
+        /// The DNS server responded with a format error response code.
+        /// </summary>
+        DnsFormatError = -816,
+
+        /// <summary>
+        /// The DNS server responded with a server failure response code.
+        /// </summary>
+        DnsServerFailure = -817,
+
+        /// <summary>
+        /// The DNS server responded that the query type is not implemented.
+        /// </summary>
+        DnsNotImplemented = -818,
+
+        /// <summary>
+        /// The DNS server responded that the request was refused.
+        /// </summary>
+        DnsRefused = -819,
+
+        /// <summary>
+        /// The DNS server responded with an rcode indicating that the request failed,
+        /// but the rcode is not one that we have a specific error code for. In other
+        /// words, the rcode was not one of the following:
+        /// - NOERR
+        /// - FORMERR
+        /// - SERVFAIL
+        /// - NXDOMAIN
+        /// - NOTIMP
+        /// - REFUSED
+        /// </summary>
+        DnsOtherFailure = -820,
+
+        /// <summary>
+        /// Declined to call DNS for a direct_only request of a hostname whose traffic
+        /// would be routed through a proxy.
+        /// </summary>
+        DnsDirectOnly = -821,
+
+        // The following errors are for mapped from a subset of invalid
+        // storage::BlobStatus.
+
+        /// <summary>
+        /// The construction arguments are invalid. This is considered a bad IPC.
+        /// </summary>
+        BlobInvalidConstructionArguments = -900,
+
+        /// <summary>
+        /// We don't have enough memory for the blob.
+        /// </summary>
+        BlobOutOfMemory = -901,
+
+        /// <summary>
+        /// We couldn't create or write to a file. File system error, like a full disk.
+        /// </summary>
+        BlobFileWriteFailed = -902,
+
+        /// <summary>
+        /// The renderer was destroyed while data was in transit.
+        /// </summary>
+        BlobSourceDiedInTransit = -903,
+
+        /// <summary>
+        /// The renderer destructed the blob before it was done transferring, and there
+        /// were no outstanding references (no one is waiting to read) to keep the
+        /// blob alive.
+        /// </summary>
+        BlobDereferencedWhileBuilding = -904,
+
+        /// <summary>
+        /// A blob that we referenced during construction is broken, or a browser-side
+        /// builder tries to build a blob with a blob reference that isn't finished
+        /// constructing.
+        /// </summary>
+        BlobReferencedBlobBroken = -905,
+
+        /// <summary>
+        /// A file that we referenced during construction is not accessible to the
+        /// renderer trying to create the blob.
+        /// </summary>
+        BlobReferencedFileUnavailable = -906,
     };
 }

@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -19,11 +19,16 @@ namespace CefSharp
         LinkClicked = 0,
 
         /// <summary>
-        /// Source is some other "explicit" navigation action such as creating a new 
-        /// browser or using the LoadURL function. This is also the default value
-        /// for navigations where the actual type is unknown.
+        /// Source is some other "explicit" navigation. This is the default value for
+        /// navigations where the actual type is unknown. See also <see cref="DirectLoad"/>.
         /// </summary>
         Explicit = 1,
+
+        /// <summary>
+		/// User got to this page through a suggestion in the UI (for example, via the
+		/// destinations page). Chrome runtime only.
+		/// </summary>
+		AutoBookmark = 2,
 
         /// <summary>
         /// Source is a subframe navigation. This is any content that is automatically
@@ -44,6 +49,25 @@ namespace CefSharp
         ManualSubFrame = 4,
 
         /// <summary>
+		/// User got to this page by typing in the URL bar and selecting an entry
+		/// that did not look like a URL.  For example, a match might have the URL
+		/// of a Google search result page, but appear like &quot;Search Google for ...&quot;.
+		/// These are not quite the same as EXPLICIT navigations because the user
+		/// didn&apos;t type or see the destination URL. Chrome runtime only.
+		/// See also TT_KEYWORD.
+		/// </summary>
+		Generated = 5,
+
+        /// <summary>
+		/// This is a toplevel navigation. This is any content that is automatically
+		/// loaded in a toplevel frame.  For example, opening a tab to show the ASH
+		/// screen saver, opening the devtools window, opening the NTP after the safe
+		/// browsing warning, opening web-based dialog boxes are examples of
+		/// AUTO_TOPLEVEL navigations. Chrome runtime only.
+		/// </summary>
+		AutoToplevel = 6,
+
+        /// <summary>
         /// Source is a form submission by the user. NOTE: In some situations
         /// submitting a form does not result in this transition type. This can happen
         /// if the form uses a script to submit the contents.
@@ -58,6 +82,25 @@ namespace CefSharp
         Reload = 8,
 
         /// <summary>
+		/// The url was generated from a replaceable keyword other than the default
+		/// search provider. If the user types a keyword (which also applies to
+		/// tab-to-search) in the omnibox this qualifier is applied to the transition
+		/// type of the generated url. TemplateURLModel then may generate an
+		/// additional visit with a transition type of TT_KEYWORD_GENERATED against the
+		/// url &apos;http://&apos; + keyword. For example, if you do a tab-to-search against
+		/// wikipedia the generated url has a transition qualifer of TT_KEYWORD, and
+		/// TemplateURLModel generates a visit for &apos;wikipedia.org&apos; with a transition
+		/// type of TT_KEYWORD_GENERATED. Chrome runtime only.
+		/// </summary>
+		Keyword = 9,
+
+        /// <summary>
+		/// Corresponds to a visit generated for a keyword. See description of
+		/// TT_KEYWORD for more details. Chrome runtime only.
+		/// </summary>
+		KeywordGenerated = 10,
+
+        /// <summary>
         /// General mask defining the bits used for the source values.
         /// </summary>
         SourceMask = 0xFF,
@@ -69,8 +112,26 @@ namespace CefSharp
 
         /// <summary>
         /// Used the Forward or Back function to navigate among browsing history.
+        /// Will be ORed to the transition type for the original load.
         /// </summary>
         ForwardBack = 0x01000000,
+
+        /// <summary>
+        /// Loaded a URL directly via CreateBrowser, LoadURL or LoadRequest.
+        /// </summary>
+        DirectLoad = 0x02000000,
+
+        /// <summary>
+		/// User is navigating to the home page. Chrome runtime only.
+		/// </summary>
+		HomePage = 0x04000000,
+
+        /// <summary>
+        /// The transition originated from an external application; the exact
+        /// definition of this is embedder dependent. Chrome runtime and
+        /// extension system only.
+        /// </summary>
+        FromApi = 0x08000000,
 
         /// <summary>
         /// The beginning of a navigation chain.

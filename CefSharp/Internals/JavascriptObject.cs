@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -36,11 +36,6 @@ namespace CefSharp.Internals
         public bool IsAsync { get; set; }
 
         /// <summary>
-        /// Indicate if JavascriptName is camel case or not
-        /// </summary>
-        public bool CamelCaseJavascriptNames { get; set; }
-
-        /// <summary>
         /// Gets the methods of the <see cref="JavascriptObject" />.
         /// </summary>
         [DataMember]
@@ -53,6 +48,12 @@ namespace CefSharp.Internals
         public List<JavascriptProperty> Properties { get; private set; }
 
         /// <summary>
+        /// A javascript object is created for every object, even those that are sub objects
+        /// it's important we only transmit the Root Objects (top level/parent)
+        /// </summary>
+        public bool RootObject { get; set; }
+
+        /// <summary>
         /// Gets or sets the value.
         /// </summary>
         public object Value { get; set; }
@@ -60,6 +61,10 @@ namespace CefSharp.Internals
         public IBinder Binder { get; set; }
 
         public IMethodInterceptor MethodInterceptor { get; set; }
+
+#if !NETCOREAPP
+        public IPropertyInterceptor PropertyInterceptor { get; set; }
+#endif
 
         public JavascriptObject()
         {

@@ -1,87 +1,114 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #pragma once
 
 #include "Stdafx.h"
-#include "include/cef_app.h"
 #include "include/cef_base.h"
 
+#include "SubProcessApp.h"
 #include "CefBrowserWrapper.h"
+#include "JavascriptBindingSettings.h"
 #include "RegisterBoundObjectRegistry.h"
 
 using namespace System::Collections::Generic;
+using namespace CefSharp::RenderProcess;
 
 namespace CefSharp
 {
-    // This class is the native subprocess level CEF object wrapper.
-    private class CefAppUnmanagedWrapper : CefApp, CefRenderProcessHandler
+    namespace BrowserSubprocess
     {
-    private:
-        static const CefString kPromiseCreatorScript;
-
-        gcroot<Action<CefBrowserWrapper^>^> _onBrowserCreated;
-        gcroot<Action<CefBrowserWrapper^>^> _onBrowserDestroyed;
-        gcroot<ConcurrentDictionary<int, CefBrowserWrapper^>^> _browserWrappers;
-        gcroot<List<CefExtension^>^> _extensions;
-        gcroot<List<CefCustomScheme^>^> _schemes;
-        bool _focusedNodeChangedEnabled;
-        bool _legacyBindingEnabled;
-
-        // The serialized registered object data waiting to be used.
-        gcroot<Dictionary<String^, JavascriptObject^>^> _javascriptObjects;
-
-        gcroot<RegisterBoundObjectRegistry^> _registerBoundObjectRegistry;
-
-    public:
-        static const CefString kPromiseCreatorFunction;
-
-        CefAppUnmanagedWrapper(List<CefCustomScheme^>^ schemes, bool enableFocusedNodeChanged, Action<CefBrowserWrapper^>^ onBrowserCreated, Action<CefBrowserWrapper^>^ onBrowserDestoryed)
+        // This class is the native subprocess level CEF object wrapper.
+        private class CefAppUnmanagedWrapper : SubProcessApp, CefRenderProcessHandler
         {
-            _onBrowserCreated = onBrowserCreated;
-            _onBrowserDestroyed = onBrowserDestoryed;
-            _browserWrappers = gcnew ConcurrentDictionary<int, CefBrowserWrapper^>();
-            _extensions = gcnew List<CefExtension^>();
-            _schemes = schemes;
-            _focusedNodeChangedEnabled = enableFocusedNodeChanged;
-            _javascriptObjects = gcnew Dictionary<String^, JavascriptObject^>();
-            _registerBoundObjectRegistry = gcnew RegisterBoundObjectRegistry();
-            _legacyBindingEnabled = false;
-        }
+        private:
+            gcroot<IRenderProcessHandler^> _handler;
+            gcroot<Action<CefBrowserWrapper^>^> _onBrowserCreated;
+            gcroot<Action<CefBrowserWrapper^>^> _onBrowserDestroyed;
+            gcroot<ConcurrentDictionary<int, CefBrowserWrapper^>^> _browserWrappers;
+            gcroot<ConcurrentDictionary<int, JavascriptBindingSettings^>^> _browserJavascriptBindingSettings;
+            gcroot<ConcurrentDictionary<String^, JavascriptRootObjectWrapper^>^> _jsRootObjectWrappersByFrameId;
+            bool _focusedNodeChangedEnabled;
 
-        ~CefAppUnmanagedWrapper()
-        {
-            if (!Object::ReferenceEquals(_browserWrappers, nullptr))
+            // The serialized registered object data waiting to be used.
+            gcroot<Dictionary<String^, JavascriptObject^>^> _javascriptObjects;
+
+            gcroot<RegisterBoundObjectRegistry^> _registerBoundObjectRegistry;
+
+            static bool IsJavascriptBindingApiAllowed(JavascriptBindingSettings^ javascriptBindingSettings, CefRefPtr<CefFrame> frame);
+
+            static JavascriptBindingSettings^ JavascriptBindingSettingsFactory(int _)
             {
-                for each(CefBrowserWrapper^ browser in Enumerable::OfType<CefBrowserWrapper^>(_browserWrappers))
+                return gcnew JavascriptBindingSettings();
+            }
+
+        public:
+            static const CefString kPromiseCreatorScript;
+
+            CefAppUnmanagedWrapper(IRenderProcessHandler^ handler, List<CefCustomScheme^>^ schemes, bool enableFocusedNodeChanged, Action<CefBrowserWrapper^>^ onBrowserCreated, Action<CefBrowserWrapper^>^ onBrowserDestroyed) : SubProcessApp(schemes)
+            {
+                _handler = handler;
+                _onBrowserCreated = onBrowserCreated;
+                _onBrowserDestroyed = onBrowserDestroyed;
+                _browserWrappers = gcnew ConcurrentDictionary<int, CefBrowserWrapper^>();
+                _browserJavascriptBindingSettings = gcnew ConcurrentDictionary<int, JavascriptBindingSettings^>();
+                _jsRootObjectWrappersByFrameId = gcnew ConcurrentDictionary<String^, JavascriptRootObjectWrapper^>();
+                _focusedNodeChangedEnabled = enableFocusedNodeChanged;
+                _javascriptObjects = gcnew Dictionary<String^, JavascriptObject^>();
+                _registerBoundObjectRegistry = gcnew RegisterBoundObjectRegistry();
+            }
+
+            ~CefAppUnmanagedWrapper()
+            {
+                if (!Object::ReferenceEquals(_browserWrappers, nullptr))
                 {
-                    delete browser;
+                    for each (CefBrowserWrapper ^ browser in _browserWrappers->Values)
+                    {
+                        delete browser;
+                    }
+
+                    _browserWrappers = nullptr;
                 }
 
-                _browserWrappers = nullptr;
+                if (!Object::ReferenceEquals(_browserJavascriptBindingSettings, nullptr))
+                {
+                    for each (JavascriptBindingSettings ^ javascriptBindingSettings in _browserJavascriptBindingSettings->Values)
+                    {
+                        delete javascriptBindingSettings;
+                    }
+
+                    _browserJavascriptBindingSettings = nullptr;
+                }
+
+                if (!Object::ReferenceEquals(_jsRootObjectWrappersByFrameId, nullptr))
+                {
+                    for each (JavascriptRootObjectWrapper^ rootObject in _jsRootObjectWrappersByFrameId->Values)
+                    {
+                        delete rootObject;
+                    }
+
+                    _jsRootObjectWrappersByFrameId = nullptr;
+                }
+
+                delete _onBrowserCreated;
+                delete _onBrowserDestroyed;
             }
-            delete _onBrowserCreated;
-            delete _onBrowserDestroyed;
-            delete _extensions;
-            delete _schemes;
-        }
 
-        CefBrowserWrapper^ FindBrowserWrapper(int browserId);
-        JavascriptRootObjectWrapper^ GetJsRootObjectWrapper(int browserId, int64 frameId);
+            CefBrowserWrapper^ FindBrowserWrapper(int browserId);
+            JavascriptRootObjectWrapper^ GetJsRootObjectWrapper(int browserId, const CefString& frameId);
 
-        virtual DECL CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() OVERRIDE;
-        virtual DECL void OnBrowserCreated(CefRefPtr<CefBrowser> browser) OVERRIDE;
-        virtual DECL void OnBrowserDestroyed(CefRefPtr<CefBrowser> browser) OVERRIDE;
-        virtual DECL void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) OVERRIDE;
-        virtual DECL void OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) OVERRIDE;
-        virtual DECL bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefProcessId sourceProcessId, CefRefPtr<CefProcessMessage> message) OVERRIDE;
-        virtual DECL void OnRenderThreadCreated(CefRefPtr<CefListValue> extraInfo) OVERRIDE;
-        virtual DECL void OnWebKitInitialized() OVERRIDE;
-        virtual DECL void OnRegisterCustomSchemes(CefRawPtr<CefSchemeRegistrar> registrar) OVERRIDE;
-        virtual DECL void OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefDOMNode> node) OVERRIDE;
-        virtual DECL void OnUncaughtException(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context, CefRefPtr<CefV8Exception> exception, CefRefPtr<CefV8StackTrace> stackTrace) OVERRIDE;
+            virtual DECL CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override;
+            virtual DECL void OnBrowserCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefDictionaryValue> extraInfo) override;
+            virtual DECL void OnBrowserDestroyed(CefRefPtr<CefBrowser> browser) override;
+            virtual DECL void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override;
+            virtual DECL void OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override;
+            virtual DECL bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefProcessId sourceProcessId, CefRefPtr<CefProcessMessage> message) override;
+            virtual DECL void OnWebKitInitialized() override;
+            virtual DECL void OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefDOMNode> node) override;
+            virtual DECL void OnUncaughtException(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context, CefRefPtr<CefV8Exception> exception, CefRefPtr<CefV8StackTrace> stackTrace) override;
 
-        IMPLEMENT_REFCOUNTING(CefAppUnmanagedWrapper);
-    };
+            IMPLEMENT_REFCOUNTINGM(CefAppUnmanagedWrapper);
+        };
+    }
 }

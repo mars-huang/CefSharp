@@ -1,13 +1,18 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2011 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using CefSharp.Example;
+using CefSharp.Example.Handlers;
 using CefSharp.Wpf.Example.Controls;
 using CefSharp.Wpf.Example.ViewModels;
 using Microsoft.Win32;
@@ -37,7 +42,7 @@ namespace CefSharp.Wpf.Example
 
             Loaded += MainWindowLoaded;
 
-            var bitness = Environment.Is64BitProcess ? "x64" : "x86";
+            var bitness = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
             Title += " - " + bitness;
         }
 
@@ -78,9 +83,9 @@ namespace CefSharp.Wpf.Example
             CreateNewTab(CefExample.DefaultUrl, true);
         }
 
-        private void CreateNewTab(string url = DefaultUrlForAddedTabs, bool showSideBar = false)
+        private void CreateNewTab(string url = DefaultUrlForAddedTabs, bool showSideBar = false, bool legacyBindingEnabled = false)
         {
-            BrowserTabs.Add(new BrowserTabViewModel(url) { ShowSidebar = showSideBar });
+            BrowserTabs.Add(new BrowserTabViewModel(url) { ShowSidebar = showSideBar, LegacyBindingEnabled = legacyBindingEnabled });
         }
 
         private void CustomCommandBinding(object sender, ExecutedRoutedEventArgs e)
@@ -107,38 +112,69 @@ namespace CefSharp.Wpf.Example
                 {
                     browserViewModel.LoadCustomRequestExample();
                 }
-
-                if(param == "OpenDevTools")
+                else if (param == "OpenDevTools")
                 {
                     browserViewModel.WebBrowser.ShowDevTools();
                 }
-
-                if (param == "ZoomIn")
+                else if (param == "ZoomIn")
                 {
                     var cmd = browserViewModel.WebBrowser.ZoomInCommand;
                     cmd.Execute(null);
                 }
-
-                if (param == "ZoomOut")
+                else if (param == "ZoomOut")
                 {
                     var cmd = browserViewModel.WebBrowser.ZoomOutCommand;
                     cmd.Execute(null);
                 }
-
-                if (param == "ZoomReset")
+                else if (param == "ZoomReset")
                 {
                     var cmd = browserViewModel.WebBrowser.ZoomResetCommand;
                     cmd.Execute(null);
                 }
-
-                if (param == "ToggleSidebar")
+                else if (param == "ToggleAudioMute")
+                {
+                    var cmd = browserViewModel.WebBrowser.ToggleAudioMuteCommand;
+                    cmd.Execute(null);
+                }
+                else if (param == "ClearHttpAuthCredentials")
+                {
+                    var browserHost = browserViewModel.WebBrowser.GetBrowserHost();
+                    if (browserHost != null && !browserHost.IsDisposed)
+                    {
+                        var requestContext = browserHost.RequestContext;
+                        requestContext.ClearHttpAuthCredentials();
+                        requestContext.ClearHttpAuthCredentialsAsync().ContinueWith(x =>
+                        {
+                            Console.WriteLine("RequestContext.ClearHttpAuthCredentials returned " + x.Result);
+                        });
+                    }
+                }
+                else if (param == "ToggleSidebar")
                 {
                     browserViewModel.ShowSidebar = !browserViewModel.ShowSidebar;
                 }
-
-                if (param == "ToggleDownloadInfo")
+                else if (param == "ToggleDownloadInfo")
                 {
                     browserViewModel.ShowDownloadInfo = !browserViewModel.ShowDownloadInfo;
+                }
+                else if (param == "ResizeHackTests")
+                {
+                    ReproduceWasResizedCrashAsync();
+                }
+                else if (param == "AsyncJsbTaskTests")
+                {
+                    //After this setting has changed all tests will run through the Concurrent MethodQueueRunner
+                    CefSharpSettings.ConcurrentTaskExecution = true;
+
+                    CreateNewTab(CefExample.BindingTestsAsyncTaskUrl, true);
+
+                    TabControl.SelectedIndex = TabControl.Items.Count - 1;
+                }
+                else if (param == "LegacyBindingTest")
+                {
+                    CreateNewTab(CefExample.LegacyBindingTestUrl, true, legacyBindingEnabled: true);
+
+                    TabControl.SelectedIndex = TabControl.Items.Count - 1;
                 }
 
                 //NOTE: Add as required
@@ -177,13 +213,13 @@ namespace CefSharp.Wpf.Example
                     var success = await browserViewModel.WebBrowser.PrintToPdfAsync(dialog.FileName, new PdfPrintSettings
                     {
                         MarginType = CefPdfPrintMarginType.Custom,
-                        MarginBottom = 10,
-                        MarginTop = 0,
-                        MarginLeft = 20,
-                        MarginRight = 10,
+                        MarginBottom = 0.01,
+                        MarginTop = 0.01,
+                        MarginLeft = 0.01,
+                        MarginRight = 0.01,
                     });
 
-                    if(success)
+                    if (success)
                     {
                         MessageBox.Show("Pdf was saved to " + dialog.FileName);
                     }
@@ -191,7 +227,7 @@ namespace CefSharp.Wpf.Example
                     {
                         MessageBox.Show("Unable to save Pdf, check you have write permissions to " + dialog.FileName);
                     }
-                    
+
                 }
             }
         }
@@ -199,7 +235,7 @@ namespace CefSharp.Wpf.Example
         private void OpenTabCommandBinding(object sender, ExecutedRoutedEventArgs e)
         {
             var url = e.Parameter.ToString();
-            
+
             if (string.IsNullOrEmpty(url))
             {
                 throw new Exception("Please provide a valid command parameter for binding");
@@ -214,5 +250,76 @@ namespace CefSharp.Wpf.Example
         {
             Close();
         }
+
+        private void CloseTab(BrowserTabViewModel browserViewModel)
+        {
+            if (BrowserTabs.Remove(browserViewModel))
+            {
+                browserViewModel.WebBrowser?.Dispose();
+            }
+        }
+
+        private void ReproduceWasResizedCrashAsync()
+        {
+            CreateNewTab();
+            CreateNewTab();
+
+            WindowState = WindowState.Normal;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    var random = new Random();
+
+                    for (int i = 0; i < 20; i++)
+                    {
+                        for (int j = 0; j < 150; j++)
+                        {
+                            Dispatcher.Invoke(new Action(() =>
+                            {
+                                var newWidth = Width + (i % 2 == 0 ? -5 : 5);
+                                var newHeight = Height + (i % 2 == 0 ? -5 : 5);
+                                if (newWidth < 500 || newWidth > 1500)
+                                {
+                                    newWidth = 1000;
+                                }
+                                if (newHeight < 500 || newHeight > 1500)
+                                {
+                                    newHeight = 1000;
+                                }
+                                Width = newWidth;
+                                Height = newHeight;
+
+                                // Get all indexes but the selected one
+                                var indexes = new List<int>();
+                                for (int k = 0; k < TabControl.Items.Count; k++)
+                                {
+                                    if (TabControl.SelectedIndex != k)
+                                    {
+                                        indexes.Add(k);
+                                    }
+                                }
+
+                                // Select a random unselected tab
+                                TabControl.SelectedIndex = indexes[random.Next(0, indexes.Count)];
+
+                                // Close a tab and create a tab once in a while
+                                if (random.Next(0, 5) == 0)
+                                {
+                                    CloseTab(BrowserTabs[Math.Max(1, TabControl.SelectedIndex)]); // Don't close the first tab
+                                    CreateNewTab();
+                                }
+                            }));
+
+                            // Sleep random amount of time
+                            Thread.Sleep(random.Next(1, 11));
+                        }
+                    }
+                }
+                catch (TaskCanceledException) { } // So it doesn't break on VS stop
+            });
+        }
+
     }
 }

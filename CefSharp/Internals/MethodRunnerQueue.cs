@@ -1,117 +1,100 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2015 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using CefSharp.Internals.Tasks;
 
 namespace CefSharp.Internals
 {
-    public sealed class MethodRunnerQueue
+    /// <summary>
+    /// MethodRunnerQueue - Async Javascript Binding methods are run
+    /// on the ThreadPool sequentially
+    /// </summary>
+    public sealed class MethodRunnerQueue : IMethodRunnerQueue
     {
-        private readonly JavascriptObjectRepository repository;
-        private readonly AutoResetEvent stopped = new AutoResetEvent(false);
-        private readonly BlockingCollection<Task<MethodInvocationResult>> queue = new BlockingCollection<Task<MethodInvocationResult>>();
-        private readonly object lockObject = new object();
-        private volatile CancellationTokenSource cancellationTokenSource;
-        private volatile bool running;
+        //Limit to 1 task per methodRunnerQueue
+        //https://social.msdn.microsoft.com/Forums/vstudio/en-US/d0bcb415-fb1e-42e4-90f8-c43a088537fb/aborting-a-long-running-task-in-tpl?forum=parallelextensions
+        private readonly LimitedConcurrencyLevelTaskScheduler taskScheduler = new LimitedConcurrencyLevelTaskScheduler(1);
+        private readonly IJavascriptObjectRepositoryInternal repository;
+        private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
+        /// <inheritdoc/>
         public event EventHandler<MethodInvocationCompleteArgs> MethodInvocationComplete;
 
-        public MethodRunnerQueue(JavascriptObjectRepository repository)
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        /// <param name="repository">javascript object repository</param>
+        public MethodRunnerQueue(IJavascriptObjectRepositoryInternal repository)
         {
             this.repository = repository;
         }
 
-        public void Start()
+        /// <inheritdoc/>
+        public void Dispose()
         {
-            lock (lockObject)
-            {
-                if (!running)
-                {
-                    cancellationTokenSource = new CancellationTokenSource();
-                    Task.Factory.StartNew(ConsumeTasks, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-                    running = true;
-                }
-            }
+            //Cancel all tasks associated with this MethoRunnerQueue
+            cancellationTokenSource.Cancel();
         }
 
-        public void Stop()
-        {
-            lock (lockObject)
-            {
-                if (running)
-                {
-                    cancellationTokenSource.Cancel();
-                    stopped.WaitOne();
-                    //clear the queue
-                    while (queue.Count > 0)
-                    {
-                        queue.Take();
-                    }
-                    cancellationTokenSource = null;
-                    running = false;
-                }
-            }
-        }
-
+        /// <inheritdoc/>
         public void Enqueue(MethodInvocation methodInvocation)
         {
-            var task = new Task<MethodInvocationResult>(() => ExecuteMethodInvocation(methodInvocation));
-            queue.Add(task);
-        }
+            if(cancellationTokenSource.IsCancellationRequested)
+            {
+                return;
+            }
 
-        private void ConsumeTasks()
-        {
-            try
+            Task.Factory.StartNew(() =>
             {
-                
-                if(CefSharpSettings.ConcurrentTaskExecution)
+                if (cancellationTokenSource.IsCancellationRequested)
                 {
-                    //New experimental behaviour that Starts the Tasks on TaskScheduler.Default 
-                    while (!cancellationTokenSource.IsCancellationRequested)
-                    {
-                        var task = queue.Take(cancellationTokenSource.Token);
-                        task.ContinueWith((t) =>
-                        {
-                            OnMethodInvocationComplete(t.Result);
-                        }, cancellationTokenSource.Token);
-                        task.Start(TaskScheduler.Default);
-                    }
+                    return;
                 }
-                else
+
+                var result = ExecuteMethodInvocation(methodInvocation);
+
+                var handler = MethodInvocationComplete;
+                if (!cancellationTokenSource.Token.IsCancellationRequested && handler != null)
                 {
-                    //Old behaviour, runs Tasks in sequential order on the current Thread.
-                    while (!cancellationTokenSource.IsCancellationRequested)
-                    {
-                        var task = queue.Take(cancellationTokenSource.Token);
-                        task.RunSynchronously();
-                        OnMethodInvocationComplete(task.Result);
-                    }
+                    handler(this, new MethodInvocationCompleteArgs(result));
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // Note: Task has been cancelled
-            }
-            finally
-            {
-                stopped.Set();
-            }
+            }, cancellationTokenSource.Token, TaskCreationOptions.HideScheduler, taskScheduler);
         }
 
         private MethodInvocationResult ExecuteMethodInvocation(MethodInvocation methodInvocation)
         {
-            object result = null;
+            object returnValue = null;
             string exception;
             var success = false;
+            var nameConverter = repository.NameConverter;
 
             //make sure we don't throw exceptions in the executor task
             try
             {
-                success = repository.TryCallMethod(methodInvocation.ObjectId, methodInvocation.MethodName, methodInvocation.Parameters.ToArray(), out result, out exception);
+                var result = repository.TryCallMethod(methodInvocation.ObjectId, methodInvocation.MethodName, methodInvocation.Parameters.ToArray());
+                success = result.Success;
+                returnValue = result.ReturnValue;
+                exception = result.Exception;
+
+                //We don't support Tasks by default
+                if (success && returnValue != null && (typeof(Task).IsAssignableFrom(returnValue.GetType())))
+                {
+                    //Use StringBuilder to improve the formatting/readability of the error message
+                    //I'm sure there's a better way I just cannot remember of the top of my head so going
+                    //with this for now, as it's only for error scenaiors I'm not concerned about performance.
+                    var builder = new System.Text.StringBuilder();
+                    builder.AppendLine("Your method returned a Task which is not supported by default you must set CefSharpSettings.ConcurrentTaskExecution = true; before creating your first ChromiumWebBrowser instance.");
+                    builder.AppendLine("This will likely change to the default at some point in the near future, subscribe to the issue link below to be notified of any changes.");
+                    builder.AppendLine("See https://github.com/cefsharp/CefSharp/issues/2758 for more details, please report any issues you have there, make sure you have an example ready that reproduces your problem.");
+
+                    success = false;
+                    result = null;
+                    exception = builder.ToString();
+                }
             }
             catch (Exception e)
             {
@@ -124,18 +107,10 @@ namespace CefSharp.Internals
                 CallbackId = methodInvocation.CallbackId,
                 FrameId = methodInvocation.FrameId,
                 Message = exception,
-                Result = result,
-                Success = success
+                Result = returnValue,
+                Success = success,
+                NameConverter = nameConverter
             };
-        }
-
-        private void OnMethodInvocationComplete(MethodInvocationResult e)
-        {
-            var handler = MethodInvocationComplete;
-            if (handler != null)
-            {
-                handler(this, new MethodInvocationCompleteArgs(e));
-            }
         }
     }
 }

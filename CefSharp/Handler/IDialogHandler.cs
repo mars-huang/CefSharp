@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -22,7 +22,7 @@ namespace CefSharp
         /// Example URL to use for file browsing http://www.cs.tut.fi/~jkorpela/forms/file.html#example
         /// Simply click browse, the space next to the browse button should be populated with a randomly generated filename.
         /// </example>
-        /// <param name="browserControl">the browser control</param>
+        /// <param name="chromiumWebBrowser">the ChromiumWebBrowser control</param>
         /// <param name="browser">the browser object</param>
         /// <param name="mode">represents the type of dialog to display</param>
         /// <param name="title">the title to be used for the dialog. It may be empty to show the default title ("Open" or "Save" 
@@ -33,9 +33,23 @@ namespace CefSharp
         /// (a) valid lower-cased MIME types (e.g. "text/*" or "image/*"),
         /// (b) individual file extensions (e.g. ".txt" or ".png"),
         /// (c) combined description and file extension delimited using "|" and ";" (e.g. "Image Types|.png;.gif;.jpg").</param>
-        /// <param name="selectedAcceptFilter">is the 0-based index of the filter that should be selected by default.</param>
+        /// <param name="acceptExtensions">provides the semicolon-delimited expansion of MIME
+        /// types to file extensions (if known, or empty string otherwise).</param>
+        /// <param name="acceptDescriptions">
+        /// Provides the descriptions for MIME types (if known, or empty string otherwise).
+        /// For example, the 'image/*' mime type might have extensions ".png;.jpg;.bmp;..." and description 'Image Files'
+        /// </param>
         /// <param name="callback">Callback interface for asynchronous continuation of file dialog requests.</param>
         /// <returns>To display a custom dialog return true. To display the default dialog return false.</returns>
-        bool OnFileDialog(IWebBrowser browserControl, IBrowser browser, CefFileDialogMode mode, string title, string defaultFilePath, List<string> acceptFilters, int selectedAcceptFilter, IFileDialogCallback callback);
+        bool OnFileDialog(
+            IWebBrowser chromiumWebBrowser,
+            IBrowser browser,
+            CefFileDialogMode mode,
+            string title,
+            string defaultFilePath,
+            IReadOnlyCollection<string> acceptFilters,
+            IReadOnlyCollection<string> acceptExtensions,
+            IReadOnlyCollection<string> acceptDescriptions,
+            IFileDialogCallback callback);
     }
 }

@@ -1,55 +1,59 @@
-﻿// Copyright © 2010-2016 The CefSharp Authors. All rights reserved.
+// Copyright © 2017 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-using System.Collections.Generic;
-
-using Size = CefSharp.Structs.Size;
+using CefSharp.Wpf.Example.Views;
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Media;
 
 namespace CefSharp.Wpf.Example.Handlers
 {
-    public class DisplayHandler : IDisplayHandler
+    public class DisplayHandler : CefSharp.Handler.DisplayHandler
     {
+        private Grid parent;
+        private Window fullScreenWindow;
 
-        void IDisplayHandler.OnAddressChanged(IWebBrowser browserControl, AddressChangedEventArgs addressChangedArgs)
+        protected override void OnFullscreenModeChange(IWebBrowser chromiumWebBrowser, IBrowser browser, bool fullscreen)
         {
-            
-        }
+            var webBrowser = (ChromiumWebBrowser)chromiumWebBrowser;
 
-        bool IDisplayHandler.OnAutoResize(IWebBrowser browserControl, IBrowser browser, Size newSize)
-        {
-            return false;
-        }
+            webBrowser.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                if (fullscreen)
+                {
+                    //In this example the parent is a Grid, if your parent is a different type
+                    //of control then update this code accordingly.
+                    parent = (Grid)VisualTreeHelper.GetParent(webBrowser);
 
-        void IDisplayHandler.OnTitleChanged(IWebBrowser browserControl, TitleChangedEventArgs titleChangedArgs)
-        {
-            
-        }
+                    //NOTE: If the ChromiumWebBrowser instance doesn't have a direct reference to
+                    //the DataContext in this case the BrowserTabViewModel then your bindings won't
+                    //be updated/might cause issues like the browser reloads the Url when exiting
+                    //fullscreen.
+                    parent.Children.Remove(webBrowser);
 
-        void IDisplayHandler.OnFaviconUrlChange(IWebBrowser browserControl, IBrowser browser, IList<string> urls)
-        {
-            
-        }
+                    fullScreenWindow = new Window
+                    {
+                        WindowStyle = WindowStyle.None,
+                        WindowState = WindowState.Maximized,
+                        Content = webBrowser                        
+                    };
 
-        void IDisplayHandler.OnFullscreenModeChange(IWebBrowser browserControl, IBrowser browser, bool fullscreen)
-        {
+                    fullScreenWindow.ShowDialog();
+                }
+                else
+                {
+                    fullScreenWindow.Content = null;
 
-        }
+                    parent.Children.Add(webBrowser);
 
-        bool IDisplayHandler.OnTooltipChanged(IWebBrowser browserControl, ref string text)
-        {
-            //text = "Sample text";
-            return false;
-        }
-
-        void IDisplayHandler.OnStatusMessage(IWebBrowser browserControl, StatusMessageEventArgs statusMessageArgs)
-        {
-            
-        }
-
-        bool IDisplayHandler.OnConsoleMessage(IWebBrowser browserControl, ConsoleMessageEventArgs consoleMessageArgs)
-        {
-            return false;
+                    fullScreenWindow.Close();
+                    fullScreenWindow = null;
+                    parent = null;
+                }
+            }));
         }
     }
 }

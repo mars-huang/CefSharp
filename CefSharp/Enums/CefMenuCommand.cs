@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2015 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -39,12 +39,12 @@ namespace CefSharp
         AddToDictionary = 206,
 
         /// <summary>
-        /// Custom menu items originating from the renderer process. For example, plugin placeholder menu items or Flash menu items.
+        /// Custom menu items originating from the renderer process
         /// This is the first entry
         /// </summary>
         CustomFirst = 220,
         /// <summary>
-        /// Custom menu items originating from the renderer process. For example, plugin placeholder menu items or Flash menu items.
+        /// Custom menu items originating from the renderer process
         /// This is the last entry
         /// </summary>
         CustomLast = 250,

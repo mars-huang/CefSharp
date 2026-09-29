@@ -1,10 +1,12 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2015 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using CefSharp.Callback;
+using CefSharp.Enums;
 
 namespace CefSharp
 {
@@ -21,6 +23,10 @@ namespace CefSharp
     /// </summary>
     public interface IRequestContext : IDisposable
     {
+        /// <summary>
+        /// Gets a value indicating whether the RequestContext has been disposed of.
+        /// </summary>
+        bool IsDisposed { get; }
         /// <summary>
         /// Returns true if this object is pointing to the same context object.
         /// </summary>
@@ -44,14 +50,12 @@ namespace CefSharp
 
         /// <summary>
         /// Returns the default cookie manager for this object. This will be the global
-        /// cookie manager if this object is the global request context. Otherwise,
-        /// this will be the default cookie manager used when this request context does
-        /// not receive a value via IRequestContextHandler.GetCookieManager(). 
+        /// cookie manager if this object is the global request context. 
         /// </summary>
-        /// <param name="callback">If callback is non-NULL it will be executed asnychronously on the CEF IO thread
+        /// <param name="callback">If callback is non-NULL it will be executed asynchronously on the CEF IO thread
         /// after the manager's storage has been initialized.</param>
         /// <returns>Returns the default cookie manager for this object</returns>
-        ICookieManager GetDefaultCookieManager(ICompletionCallback callback);
+        ICookieManager GetCookieManager(ICompletionCallback callback);
 
         /// <summary>
         /// Register a scheme handler factory for the specified schemeName and optional domainName.
@@ -82,22 +86,13 @@ namespace CefSharp
         string CachePath { get; }
 
         /// <summary>
-        /// Tells all renderer processes associated with this context to throw away
-        /// their plugin list cache. If reloadPages is true they will also reload
-        /// all pages with plugins. RequestContextHandler.OnBeforePluginLoad may
-        /// be called to rebuild the plugin list cache.
-        /// </summary>
-        /// <param name="reloadPages">reload any pages with pluginst</param>
-        void PurgePluginListCache(bool reloadPages);
-
-        /// <summary>
         /// Returns true if a preference with the specified name exists. This method
         /// must be called on the CEF UI thread.
         /// </summary>
         /// <param name="name">name of preference</param>
         /// <returns>bool if the preference exists</returns>
         /// <remarks>Use Cef.UIThreadTaskFactory to execute this method if required,
-        /// Cef.OnContextInitialized and ChromiumWebBrowser.IsBrowserInitializedChanged are both
+        /// <see cref="IBrowserProcessHandler.OnContextInitialized"/> and ChromiumWebBrowser.IsBrowserInitializedChanged are both
         /// executed on the CEF UI thread, so can be called directly.
         /// When CefSettings.MultiThreadedMessageLoop == false (the default is true) then the main
         /// application thread will be the CEF UI thread.</remarks>
@@ -113,7 +108,7 @@ namespace CefSharp
         /// <param name="name">preference name</param>
         /// <returns>Returns the value for the preference with the specified name</returns>
         /// <remarks>Use Cef.UIThreadTaskFactory to execute this method if required,
-        /// Cef.OnContextInitialized and ChromiumWebBrowser.IsBrowserInitializedChanged are both
+        /// <see cref="IBrowserProcessHandler.OnContextInitialized"/> and ChromiumWebBrowser.IsBrowserInitializedChanged are both
         /// executed on the CEF UI thread, so can be called directly.
         /// When CefSettings.MultiThreadedMessageLoop == false (the default is true) then the main
         /// application thread will be the CEF UI thread.</remarks>
@@ -140,7 +135,7 @@ namespace CefSharp
         /// <returns>Returns true if the preference with the specified name can be modified
         /// using SetPreference</returns>
         /// <remarks>Use Cef.UIThreadTaskFactory to execute this method if required,
-        /// Cef.OnContextInitialized and ChromiumWebBrowser.IsBrowserInitializedChanged are both
+        /// <see cref="IBrowserProcessHandler.OnContextInitialized"/> and ChromiumWebBrowser.IsBrowserInitializedChanged are both
         /// executed on the CEF UI thread, so can be called directly.
         /// When CefSettings.MultiThreadedMessageLoop == false (the default is true) then the main
         /// application thread will be the CEF UI thread.</remarks>
@@ -157,12 +152,29 @@ namespace CefSharp
         /// <param name="value">preference value</param>
         /// <param name="error">out error</param>
         /// <returns>Returns true if the value is set successfully and false otherwise.</returns>
-        /// /// <remarks>Use Cef.UIThreadTaskFactory to execute this method if required,
-        /// Cef.OnContextInitialized and ChromiumWebBrowser.IsBrowserInitializedChanged are both
+        /// <remarks>Use Cef.UIThreadTaskFactory to execute this method if required,
+        /// <see cref="IBrowserProcessHandler.OnContextInitialized"/> and ChromiumWebBrowser.IsBrowserInitializedChanged are both
         /// executed on the CEF UI thread, so can be called directly.
         /// When CefSettings.MultiThreadedMessageLoop == false (the default is true) then the main
         /// application thread will be the CEF UI thread.</remarks>
         bool SetPreference(string name, object value, out string error);
+
+        /// <summary>
+        /// Add an observer for preference changes. <paramref name="name"/> is the name of the
+        /// preference to observe. If <paramref name="name"/> is empty then all preferences will
+        /// be observed. Observing all preferences has performance consequences and
+        /// is not recommended outside of testing scenarios. The observer will remain
+        /// registered until the returned Registration object is destroyed. This
+        /// method must be called on the browser process UI thread.
+        /// </summary>
+        /// <param name="name">preference key</param>
+        /// <param name="observer">preference observer</param>
+        /// <remarks>Use Cef.UIThreadTaskFactory to execute this method if required,
+        /// <see cref="IBrowserProcessHandler.OnContextInitialized"/> and ChromiumWebBrowser.IsBrowserInitializedChanged are both
+        /// executed on the CEF UI thread, so can be called directly.
+        /// When CefSettings.MultiThreadedMessageLoop == false (the default is true) then the main
+        /// application thread will be the CEF UI thread.</remarks>
+        IRegistration AddPreferenceObserver(string name, IPreferenceObserver observer);
 
         /// <summary>
         /// Clears all certificate exceptions that were added as part of handling
@@ -173,6 +185,21 @@ namespace CefSharp
         /// <param name="callback">If is non-NULL it will be executed on the CEF UI thread after
         /// completion. This param is optional</param>
         void ClearCertificateExceptions(ICompletionCallback callback);
+
+        /// <summary>
+        /// Clears the HTTP cache.
+        /// </summary>
+        /// <param name="callback">If is non-NULL it will be executed on the CEF UI thread after
+        /// completion. This param is optional</param>
+        void ClearHttpCache(ICompletionCallback callback = null);
+
+        /// <summary>
+        /// Clears all HTTP authentication credentials that were added as part of handling
+        /// <see cref="IRequestHandler.GetAuthCredentials"/>.
+        /// </summary>
+        /// <param name="callback">If is non-NULL it will be executed on the CEF UI thread after
+        /// completion. This param is optional</param>
+        void ClearHttpAuthCredentials(ICompletionCallback callback = null);
 
         /// <summary>
         /// Clears all active and idle connections that Chromium currently has.
@@ -191,14 +218,78 @@ namespace CefSharp
         Task<ResolveCallbackResult> ResolveHostAsync(Uri origin);
 
         /// <summary>
-        /// Attempts to resolve origin to a list of associated IP addresses using
-        /// cached data. This method must be called on the CEF IO thread. Use
-        /// Cef.IOThreadTaskFactory to execute on that thread.
+        /// Returns the current value for <paramref name="contentType"/> that applies for the
+        /// specified URLs. If both URLs are empty the default value will be returned.
+        /// Returns null if no value is configured.
+        /// Must be called on the browser
+        /// process UI thread.
         /// </summary>
-        /// <param name="origin">host name to resolve</param>
-        /// <param name="resolvedIpAddresses">list of resolved IP
-        /// addresses or empty list if no cached data is available.</param>
-        /// <returns> Returns <see cref="CefErrorCode.None"/> on success</returns>
-        CefErrorCode ResolveHostCached(Uri origin, out IList<string> resolvedIpAddresses);
+        /// <param name="requestingUrl">Requesting url</param>
+        /// <param name="topLevelUrl">Top level url</param>
+        /// <param name="contentType">Content type</param>
+        /// <returns>Returns the current value for <paramref name="contentType"/> that applies for the
+        /// specified URLs.</returns>
+        object GetWebsiteSetting(string requestingUrl, string topLevelUrl, ContentSettingTypes contentType);
+
+        /// <summary>
+        /// Sets the current value for <paramref name="contentType"/> for the specified URLs in the
+        /// default scope. If both URLs are empty, and the context is not incognito,
+        /// the default value will be set. Pass null for <paramref name="value"/> to remove the
+        /// default value for this content type.
+        ///
+        /// WARNING: Incorrect usage of this method may cause instability or security
+        /// issues in Chromium. Make sure that you first understand the potential
+        /// impact of any changes to <paramref name="contentType"/> by reviewing the related source
+        /// code in Chromium. For example, if you plan to modify
+        /// <see cref="ContentSettingTypes.Popups"/>, first review and understand the usage of
+        /// ContentSettingsType::POPUPS in Chromium:
+        /// https://source.chromium.org/search?q=ContentSettingsType::POPUPS
+        /// </summary>
+        /// <param name="requestingUrl">Requesting url</param>
+        /// <param name="topLevelUrl">Top level url</param>
+        /// <param name="contentType">Content type</param>
+        /// <param name="value">value </param>
+        void SetWebsiteSetting(string requestingUrl, string topLevelUrl, ContentSettingTypes contentType, object value);
+
+        /// <summary>
+        /// Returns the current value for <paramref name="contentType"/> that applies for the
+        /// specified URLs. If both URLs are empty the default value will be returned.
+        /// Returns <see cref="ContentSettingValues.Default"/> if no value is configured. Must
+        /// be called on the browser process UI thread.
+        /// </summary>
+        /// <param name="requestingUrl">Requesting url</param>
+        /// <param name="topLevelUrl">Top level url</param>
+        /// <param name="contentType">Content type</param>
+        /// <returns>Returns the current value for <paramref name="contentType"/> that applies for the
+        /// specified URLs.</returns>
+        ContentSettingValues GetContentSetting(string requestingUrl, string topLevelUrl, ContentSettingTypes contentType);
+
+        /// <summary>
+        /// Sets the current value for <paramref name="contentType"/> for the specified URLs in the
+        /// default scope. If both URLs are empty, and the context is not incognito,
+        /// the default value will be set. Pass <see cref="ContentSettingValues.Default"/> for
+        /// <paramref name="value"/> to use the default value for this content type.
+        ///
+        /// WARNING: Incorrect usage of this method may cause instability or security
+        /// issues in Chromium. Make sure that you first understand the potential
+        /// impact of any changes to |content_type| by reviewing the related source
+        /// code in Chromium. For example, if you plan to modify
+        /// <see cref="ContentSettingTypes.Popups"/>, first review and understand the usage of
+        /// ContentSettingsType::POPUPS in Chromium:
+        /// https://source.chromium.org/search?q=ContentSettingsType::POPUPS
+        /// </summary>
+        /// <param name="requestingUrl">Requesting url</param>
+        /// <param name="topLevelUrl">Top level url</param>
+        /// <param name="contentType">Content type</param>
+        /// <param name="value">value</param>
+        void SetContentSetting(string requestingUrl, string topLevelUrl, ContentSettingTypes contentType, ContentSettingValues value);
+
+        /// <summary>
+        /// Used internally to get the underlying <see cref="IRequestContext"/> instance.
+        /// Unlikely you'll use this yourself.
+        /// </summary>
+        /// <returns>the inner most instance</returns>
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        IRequestContext UnWrap();
     }
 }

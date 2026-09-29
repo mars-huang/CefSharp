@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -36,5 +36,13 @@ namespace CefSharp
         /// Gets or sets the bytes of this <see cref="IPostDataElement"/>.
         /// </summary>
         byte[] Bytes { get; set; }
+
+        /// <summary>
+        /// Used internally to get the underlying <see cref="IPostDataElement"/> instance.
+        /// Unlikely you'll use this yourself.
+        /// </summary>
+        /// <returns>the inner most instance</returns>
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        IPostDataElement UnWrap();
     }
 }

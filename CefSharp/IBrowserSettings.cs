@@ -1,13 +1,15 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2016 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+using System;
 
 namespace CefSharp
 {
     /// <summary>
     /// Interface representing browser initialization settings. 
     /// </summary>
-    public interface IBrowserSettings
+    public interface IBrowserSettings : IDisposable
     {
         /// <summary>
         /// StandardFontFamily
@@ -23,7 +25,7 @@ namespace CefSharp
         /// SerifFontFamily
         /// </summary>
         string SerifFontFamily { get; set; }
-        
+
         /// <summary>
         /// SansSerifFontFamily
         /// </summary>
@@ -72,8 +74,8 @@ namespace CefSharp
         CefState RemoteFonts { get; set; }
 
         /// <summary>
-        /// Controls whether JavaScript can be executed.
-        /// (Disable javascript)
+        /// Controls whether JavaScript can be executed. (Used to Enable/Disable javascript)
+        /// Also configurable using the "disable-javascript" command-line switch.
         /// </summary>
         CefState Javascript { get; set; }
 
@@ -98,32 +100,6 @@ namespace CefSharp
         /// command-line switch.
         /// </summary>
         CefState JavascriptDomPaste { get; set; }
-
-        /// <summary>
-        /// Controls whether any plugins will be loaded. Also configurable using the
-        /// "disable-plugins" command-line switch.
-        /// </summary>
-        CefState Plugins { get; set; }
-
-        /// <summary>
-        /// Controls whether file URLs will have access to all URLs. Also configurable
-        /// using the "allow-universal-access-from-files" command-line switch.
-        /// </summary>
-        CefState UniversalAccessFromFileUrls { get; set; }
-
-        /// <summary>
-        /// Controls whether file URLs will have access to other file URLs. Also
-        /// configurable using the "allow-access-from-files" command-line switch.
-        /// </summary>
-        CefState FileAccessFromFileUrls { get; set; }
-
-        /// <summary>
-        /// Controls whether web security restrictions (same-origin policy) will be
-        /// enforced. Disabling this setting is not recommend as it will allow risky
-        /// security behavior such as cross-site scripting (XSS). Also configurable
-        /// using the "disable-web-security" command-line switch.
-        /// </summary>
-        CefState WebSecurity { get; set; }
 
         /// <summary>
         /// Controls whether image URLs will be loaded from the network. A cached image
@@ -164,18 +140,22 @@ namespace CefSharp
         CefState Databases { get; set; }
 
         /// <summary>
-        /// Controls whether the application cache can be used. Also configurable using
-        /// the "disable-application-cache" command-line switch.
-        /// </summary>
-        CefState ApplicationCache { get; set; }
-
-        /// <summary>
         /// Controls whether WebGL can be used. Note that WebGL requires hardware
         /// support and may not work on all systems even when enabled. Also
         /// configurable using the "disable-webgl" command-line switch.
         /// </summary>
         CefState WebGl { get; set; }
-        
+
+        /// <summary>
+        /// Controls whether the Chrome status bubble will be used. Only supported with Chrome style.
+        /// </summary>
+        CefState ChromeStatusBubble { get; set; }
+
+        /// <summary>
+        /// Controls whether the Chrome zoom bubble will be shown when zooming. Only supported with Chrome style.
+        /// </summary>
+        CefState ChromeZoomBubble { get; set; }
+
         /// <summary>
         /// Opaque background color used for the browser before a document is loaded
         /// and when no document color is specified. By default the background color
@@ -186,16 +166,6 @@ namespace CefSharp
         uint BackgroundColor { get; set; }
 
         /// <summary>
-        /// Comma delimited ordered list of language codes without any whitespace that
-        /// will be used in the "Accept-Language" HTTP header. May be overridden on a
-        /// per-browser basis using the CefBrowserSettings.AcceptLanguageList value.
-        /// If both values are empty then "en-US,en" will be used. Can be overridden
-        /// for individual RequestContext instances via the
-        /// RequestContextSettings.AcceptLanguageList value.
-        /// </summary>
-        string AcceptLanguageList { get; set; }
-
-        /// <summary>
         /// The maximum rate in frames per second (fps) that CefRenderHandler::OnPaint
         /// will be called for a windowless browser. The actual fps may be lower if
         /// the browser cannot generate frames at the requested rate. The minimum
@@ -203,5 +173,25 @@ namespace CefSharp
         /// changed dynamically via IBrowserHost.SetWindowlessFrameRate.
         /// </summary>
         int WindowlessFrameRate { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating if the browser settings has been disposed.
+        /// </summary>
+        bool IsDisposed { get; }
+
+        /// <summary>
+        /// Gets a value indicating if the browser settings instance was created internally by CefSharp.
+        /// Instances created by CefSharp will be Disposed of after use. To control the lifespan yourself
+        /// create an set BrowserSettings yourself.
+        /// </summary>
+        bool AutoDispose { get; }
+
+        /// <summary>
+        /// Used internally to get the underlying <see cref="IBrowserSettings"/> instance.
+        /// Unlikely you'll use this yourself.
+        /// </summary>
+        /// <returns>the inner most instance</returns>
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        IBrowserSettings UnWrap();
     }
 }

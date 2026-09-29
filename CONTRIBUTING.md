@@ -13,16 +13,24 @@ Thanks for your interest in contributing to the project! Please follow these sim
 
 ### `CefSharp` vs `Chromium Embedded Framework(CEF)`
 
-`CefSharp` simply takes the building blocks provided by `CEF` and attempts to provide a usable '.Net' implementation.
+`CefSharp` simply takes the building blocks provided by the [Chromium Embedded Framework(CEF)](https://github.com/chromiumembedded/cef) and provides a usable '.Net' implementation.
 The upstream [`CEF` forum](http://magpcss.org/ceforum/) is a valuable resource, if your issues seems fairly low level, then please conduct some research before posting.
 
 It maybe helpful to run the `cefclient` application and compare output with `CefSharp`. The `WinForms` and `WPF` versions use two different rendering modes, `WPF` uses Offscreen Rendering (`OSR`). `OffScreen` also uses `OSR` mode.
 
-- Download **Sample Application** from http://opensource.spotify.com/cefbuilds/index.html
-- To compare with WPF run `cefclient --multi-threaded-message-loop --off-screen-rendering-enabled`
-- To compare with WinForms `cefclient --multi-threaded-message-loop`
-
-To determine which version of `CEF` your build is running, open `chrome://version` and you'll see a number similar to `3.2987.1597.gffc5773`. Open http://opensource.spotify.com/cefbuilds/index.html and download the `Sample Application` that exactly matches. If your using an older build click `Show More Builds`.
+  - Download and run the `CEF Sample Application(cefclient)`:
+    - Download for [x86](https://cef-builds.spotifycdn.com/cef_binary_146.0.7%2Bga6b143f%2Bchromium-146.0.7680.165_windows32_client.tar.bz2) or [x64](https://cef-builds.spotifycdn.com/cef_binary_146.0.7%2Bga6b143f%2Bchromium-146.0.7680.165_windows64_client.tar.bz2) or [arm64](https://cef-builds.spotifycdn.com/cef_binary_146.0.7%2Bga6b143f%2Bchromium-146.0.7680.165_windowsarm64_client.tar.bz2).
+	- Extract and run cefclient.exe
+		- If you are using WPF/OffScreen run
+		```
+		cefclient.exe --multi-threaded-message-loop --no-sandbox --off-screen-rendering-enabled --enable-gpu
+		```
+		- If you are using WinForms run
+		```
+		cefclient.exe --multi-threaded-message-loop --no-sandbox --use-alloy-style
+		```
+	- **MAKE SURE TO TEST WITH THE COMMAND LINE ARGS LISTED ABOVE**
+    - If you can reproduce the problem with `cefclient` then you'll need to report the bug on https://github.com/chromiumembedded/cef there is no point opening an issue here. (Make sure you search before opening an issue)
 
 ### What should I include when creating an `Issue`?
 
@@ -37,12 +45,12 @@ Your bug report should **always follow this template**:
 - **Are you using `WinForms`, `WPF` or `OffScreen`?**
 - **What version of the product are you using? On what operating system? x86 or x64?**
     - What version are you using? Nuget? CI Nuget? build from a branch? If so which branch?
-    - Win7, Win 8, Win10, etc?
+    - Win10/11, etc?
 - **Please provide any additional information below.**
     - A stack trace if available, any Exception information.
     - Does the cef log provide any relevant information? (By default there should be a debug.log file in your bin directory)
 - Any other background information that's relevant? Are you doing something out of the ordinary? 3rd party controls?
-- **Does this problem also occur in the `CEF Sample Application` from http://opensource.spotify.com/cefbuilds/index.html?**
+- **Does this problem also occur in the `CEF Sample Application` from https://cef-builds.spotifycdn.com/index.html?**
 
 Your bug report should include **what you were doing** in the software when you encountered it, **what you were expecting** to happen and **what happened instead**.
 
@@ -69,9 +77,9 @@ Change requests cover both architectural and functional changes to how `CefSharp
 
 1. **Use the GitHub search** and check someone else didn't get there first
 2. Take a moment to think about the best way to make a case for, and explain what you're thinking as it's up to you to convince the project's leaders the change is worthwhile. Some questions to consider are:
-	- Is it really one idea or is it many?
-	- What problem are you solving?
-	- Why is what you are suggesting better than what's already there?
+    - Is it really one idea or is it many?
+    - What problem are you solving?
+    - Why is what you are suggesting better than what's already there?
 
 ### Pull Requests/Feature Branches
 
@@ -86,7 +94,7 @@ Pull requests are **awesome**. If you're looking to raise a `PR` for something w
 
   > Run tests in the default appdomain
   > 
-  > Due to limitations of VC++ we must run our tests in the default appdomain, it's possible to use xunit for testing. Readd CefSharp.Test.csproj to solution Add some very basic unit tests using xunit, DisableTestParallelization, Set xunit.appDomain to denied in app.config to disable using appdomains (https://xunit.github.io/docs/configuring-with-xml.html) Add xunit vs test running packages, using 2.2.0 version as 2.3.0 was throwing an exception similar to https://github.com/xunit/xunit/issues/1514 TODO: Take a look at https://github.com/NuGet/NuGetGallery/tree/master/tests/NuGetGallery.Facts for some ideas on structuring xunit tests (look at implementing Theory)
+  > Due to limitations of VC++ we must run our tests in the default appdomain, it's possible to use xunit for testing. Re-add CefSharp.Test.csproj to solution Add some very basic unit tests using xunit, DisableTestParallelization, Set xunit.appDomain to denied in app.config to disable using appdomains (https://xunit.github.io/docs/configuring-with-xml.html) Add xunit vs test running packages, using 2.2.0 version as 2.3.0 was throwing an exception similar to https://github.com/xunit/xunit/issues/1514 TODO: Take a look at https://github.com/NuGet/NuGetGallery/tree/master/tests/NuGetGallery.Facts for some ideas on structuring xunit tests (look at implementing Theory)
 
 ### Coding Style
 - **Please** follow existing coding style when submitting pull requests.

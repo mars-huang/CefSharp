@@ -1,8 +1,9 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2011 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
+using System.Threading.Tasks;
 
 namespace CefSharp
 {
@@ -10,93 +11,29 @@ namespace CefSharp
     /// ChromiumWebBrowser implementations implement this interface. Can be cast to
     /// the concrete implementation to access UI specific features.
     /// </summary>
-    /// <seealso cref="System.IDisposable" />
-    public interface IWebBrowser : IDisposable
+    public interface IWebBrowser : IChromiumWebBrowserBase
     {
         /// <summary>
-        /// Event handler for receiving Javascript console messages being sent from web pages.
-        /// It's important to note this event is fired on a CEF UI thread, which by default is not the same as your application UI
-        /// thread. It is unwise to block on this thread for any length of time as your browser will become unresponsive and/or hang..
-        /// To access UI elements you'll need to Invoke/Dispatch onto the UI Thread. 
-        /// (The exception to this is when your running with settings.MultiThreadedMessageLoop = false, then they'll be the same thread).
+        /// Event handler that will get called when the message that originates from CefSharp.PostMessage
         /// </summary>
-        event EventHandler<ConsoleMessageEventArgs> ConsoleMessage;
+        event EventHandler<JavascriptMessageReceivedEventArgs> JavascriptMessageReceived;
 
         /// <summary>
-        /// Event handler for changes to the status message.
-        /// It's important to note this event is fired on a CEF UI thread, which by default is not the same as your application UI
-        /// thread. It is unwise to block on this thread for any length of time as your browser will become unresponsive and/or hang.
-        /// To access UI elements you'll need to Invoke/Dispatch onto the UI Thread. 
-        /// (The exception to this is when your running with settings.MultiThreadedMessageLoop = false, then they'll be the same thread).
-        /// </summary>
-        event EventHandler<StatusMessageEventArgs> StatusMessage;
-
-        /// <summary>
-        /// Event handler that will get called when the browser begins loading a frame. Multiple frames may be loading at the same
-        /// time. Sub-frames may start or continue loading after the main frame load has ended. This method may not be called for a
-        /// particular frame if the load request for that frame fails. For notification of overall browser load status use
-        /// OnLoadingStateChange instead.
-        /// It's important to note this event is fired on a CEF UI thread, which by default is not the same as your application UI
-        /// thread. It is unwise to block on this thread for any length of time as your browser will become unresponsive and/or hang..
-        /// To access UI elements you'll need to Invoke/Dispatch onto the UI Thread. 
-        /// </summary>
-        /// <remarks>Whilst this may seem like a logical place to execute js, it's called before the DOM has been loaded, implement
-        /// <see cref="IRenderProcessMessageHandler.OnContextCreated"/> as it's called when the underlying V8Context is created
-        /// (Only called for the main frame at this stage)</remarks>
-        event EventHandler<FrameLoadStartEventArgs> FrameLoadStart;
-
-        /// <summary>
-        /// Event handler that will get called when the browser is done loading a frame. Multiple frames may be loading at the same
-        /// time. Sub-frames may start or continue loading after the main frame load has ended. This method will always be called
-        /// for all frames irrespective of whether the request completes successfully.
-        /// It's important to note this event is fired on a CEF UI thread, which by default is not the same as your application UI
-        /// thread. It is unwise to block on this thread for any length of time as your browser will become unresponsive and/or hang..
-        /// To access UI elements you'll need to Invoke/Dispatch onto the UI Thread. 
-        /// </summary>
-        event EventHandler<FrameLoadEndEventArgs> FrameLoadEnd;
-
-        /// <summary>
-        /// Event handler that will get called when the resource load for a navigation fails or is canceled.
-        /// It's important to note this event is fired on a CEF UI thread, which by default is not the same as your application UI
-        /// thread. It is unwise to block on this thread for any length of time as your browser will become unresponsive and/or hang..
-        /// To access UI elements you'll need to Invoke/Dispatch onto the UI Thread. 
-        /// </summary>
-        event EventHandler<LoadErrorEventArgs> LoadError;
-
-        /// <summary>
-        /// Event handler that will get called when the Loading state has changed.
-        /// This event will be fired twice. Once when loading is initiated either programmatically or
-        /// by user action, and once when loading is terminated due to completion, cancellation of failure. 
-        /// It's important to note this event is fired on a CEF UI thread, which by default is not the same as your application UI
-        /// thread. It is unwise to block on this thread for any length of time as your browser will become unresponsive and/or hang..
-        /// To access UI elements you'll need to Invoke/Dispatch onto the UI Thread. 
-        /// </summary>
-        event EventHandler<LoadingStateChangedEventArgs> LoadingStateChanged;
-
-        /// <summary>
-        /// Loads the specified URL.
+        /// Loads the specified <paramref name="url"/> in the Main Frame.
+        /// If <see cref="IChromiumWebBrowserBase.IsDisposed"/> is true then the method call will be ignored.
+        /// Same as calling <see cref="IChromiumWebBrowserBase.LoadUrl(string)"/>
         /// </summary>
         /// <param name="url">The URL to be loaded.</param>
         void Load(string url);
 
         /// <summary>
-        /// Registers a Javascript object in this specific browser instance.
+        /// Wait for the Browser to finish loading the initial web page.
         /// </summary>
-        /// <param name="name">The name of the object. (e.g. "foo", if you want the object to be accessible as window.foo).</param>
-        /// <param name="objectToBind">The object to be made accessible to Javascript.</param>
-        /// <param name="options">binding options - camelCaseJavascriptNames default to true </param>
-        void RegisterJsObject(string name, object objectToBind, BindingOptions options = null);
-
-        /// <summary>
-        /// <para>Asynchronously registers a Javascript object in this specific browser instance.</para>
-        /// <para>Only methods of the object will be available.</para>
-        /// </summary>
-        /// <param name="name">The name of the object. (e.g. "foo", if you want the object to be accessible as window.foo).</param>
-        /// <param name="objectToBind">The object to be made accessible to Javascript.</param>
-        /// <param name="options">binding options - camelCaseJavascriptNames default to true </param>
-        /// <remarks>The registered methods can only be called in an async way, they will all return immeditaly and the resulting
-        /// object will be a standard javascript Promise object which is usable to wait for completion or failure.</remarks>
-        void RegisterAsyncJsObject(string name, object objectToBind, BindingOptions options = null);
+        /// <returns>
+        /// A <see cref="Task{LoadUrlAsyncResponse}"/> that can be awaited which returns the HttpStatusCode and <see cref="CefErrorCode"/>.
+        /// A HttpStatusCode equal to 200 and <see cref="CefErrorCode.None"/> is considered a success.
+        /// </returns>
+        Task<LoadUrlAsyncResponse> WaitForInitialLoadAsync();
 
         /// <summary>
         /// The javascript object repository, one repository per ChromiumWebBrowser instance.
@@ -170,10 +107,10 @@ namespace CefSharp
         IFocusHandler FocusHandler { get; set; }
 
         /// <summary>
-        /// Implement <see cref="IResourceHandlerFactory" /> and control the loading of resources
+        /// Implement <see cref="IResourceRequestHandlerFactory" /> and control the loading of resources
         /// </summary>
         /// <value>The resource handler factory.</value>
-        IResourceHandlerFactory ResourceHandlerFactory { get; set; }
+        IResourceRequestHandlerFactory ResourceRequestHandlerFactory { get; set; }
 
         /// <summary>
         /// Implement <see cref="IRenderProcessMessageHandler" /> and assign to handle messages from the render process.
@@ -188,45 +125,19 @@ namespace CefSharp
         IFindHandler FindHandler { get; set; }
 
         /// <summary>
-        /// A flag that indicates whether the WebBrowser is initialized (true) or not (false).
+        /// Implement <see cref="IAudioHandler" /> to handle audio events.
         /// </summary>
-        /// <value><c>true</c> if this instance is browser initialized; otherwise, <c>false</c>.</value>
-        /// <remarks>In the WPF control, this property is implemented as a Dependency Property and fully supports data
-        /// binding.</remarks>
-        bool IsBrowserInitialized { get; }
+        IAudioHandler AudioHandler { get; set; }
 
         /// <summary>
-        /// A flag that indicates whether the control is currently loading one or more web pages (true) or not (false).
+        /// Implement <see cref="IFrameHandler" /> to handle frame events.
         /// </summary>
-        /// <value><c>true</c> if this instance is loading; otherwise, <c>false</c>.</value>
-        /// <remarks>In the WPF control, this property is implemented as a Dependency Property and fully supports data
-        /// binding.</remarks>
-        bool IsLoading { get; }
+        IFrameHandler FrameHandler { get; set; }
 
         /// <summary>
-        /// A flag that indicates whether the state of the control current supports the GoBack action (true) or not (false).
+        /// Implement <see cref="IPermissionHandler" /> to handle events related to permission requests.
         /// </summary>
-        /// <value><c>true</c> if this instance can go back; otherwise, <c>false</c>.</value>
-        /// <remarks>In the WPF control, this property is implemented as a Dependency Property and fully supports data
-        /// binding.</remarks>
-        bool CanGoBack { get; }
-
-        /// <summary>
-        /// A flag that indicates whether the state of the control currently supports the GoForward action (true) or not (false).
-        /// </summary>
-        /// <value><c>true</c> if this instance can go forward; otherwise, <c>false</c>.</value>
-        /// <remarks>In the WPF control, this property is implemented as a Dependency Property and fully supports data
-        /// binding.</remarks>
-        bool CanGoForward { get; }
-
-        /// <summary>
-        /// The address (URL) which the browser control is currently displaying.
-        /// Will automatically be updated as the user navigates to another page (e.g. by clicking on a link).
-        /// </summary>
-        /// <value>The address.</value>
-        /// <remarks>In the WPF control, this property is implemented as a Dependency Property and fully supports data
-        /// binding.</remarks>
-        string Address { get; }
+        IPermissionHandler PermissionHandler { get; set; }
 
         /// <summary>
         /// The text that will be displayed as a ToolTip
@@ -250,16 +161,24 @@ namespace CefSharp
         IRequestContext RequestContext { get; }
 
         /// <summary>
-        /// Attempts to give focus to the IWebBrowser control.
-        /// </summary>
-        /// <returns><c>true</c> if keyboard focus and logical focus were set to this element; <c>false</c> if only logical focus
-        /// was set to this element, or if the call to this method did not force the focus to change.</returns>
-        bool Focus();
-
-        /// <summary>
         /// Returns the current CEF Browser Instance
         /// </summary>
         /// <returns>browser instance or null</returns>
         IBrowser GetBrowser();
+
+        /// <summary>
+        /// Try and get a reference to the <see cref="IBrowser"/> instance that matches the <paramref name="browserId"/>.
+        /// Primarily used for geting a reference to the <see cref="IBrowser"/> used by popups.
+        /// </summary>
+        /// <param name="browserId">browser Id</param>
+        /// <param name="browser">When this method returns, contains the <see cref="IBrowser"/> object reference that matches the specified <paramref name="browserId"/>, or null if no matching instance found.</param>
+        /// <returns>true if a <see cref="IBrowser"/> instance was found matching <paramref name="browserId"/>; otherwise, false.</returns>
+        bool TryGetBrowserCoreById(int browserId, out IBrowser browser);
+
+        /// <summary>
+        /// Size of scrollable area in CSS pixels
+        /// </summary>
+        /// <returns>A task that can be awaited to get the size of the scrollable area in CSS pixels.</returns>
+        Task<CefSharp.Structs.DomRect> GetContentSizeAsync();
     }
 }

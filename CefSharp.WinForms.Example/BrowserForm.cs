@@ -1,12 +1,19 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2010 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using CefSharp.Example;
-using System.Threading.Tasks;
-using System.Text;
+using CefSharp.Example.Callback;
+using CefSharp.Example.Handlers;
+using CefSharp.WinForms.Host;
 
 namespace CefSharp.WinForms.Example
 {
@@ -23,7 +30,7 @@ namespace CefSharp.WinForms.Example
         {
             InitializeComponent();
 
-            var bitness = Environment.Is64BitProcess ? "x64" : "x86";
+            var bitness = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
             Text = "CefSharp.WinForms.Example - " + bitness;
             WindowState = FormWindowState.Maximized;
 
@@ -36,6 +43,19 @@ namespace CefSharp.WinForms.Example
             this.multiThreadedMessageLoopEnabled = multiThreadedMessageLoopEnabled;
         }
 
+        public IContainer Components
+        {
+            get
+            {
+                if (components == null)
+                {
+                    components = new Container();
+                }
+
+                return components;
+            }
+        }
+
         private void BrowserFormLoad(object sender, EventArgs e)
         {
             AddTab(CefExample.DefaultUrl);
@@ -45,16 +65,22 @@ namespace CefSharp.WinForms.Example
         /// Used to add a Popup browser as a Tab
         /// </summary>
         /// <param name="browserHostControl"></param>
-        public void AddTab(Control browserHostControl, string url)
+        public void AddTab(ChromiumHostControl browserHostControl, string url)
         {
             browserTabControl.SuspendLayout();
+
+            var browser = new BrowserTabUserControl(browserHostControl)
+            {
+                Dock = DockStyle.Fill,
+                Bounds = browserTabControl.Bounds
+            };
 
             var tabPage = new TabPage(url)
             {
                 Dock = DockStyle.Fill
             };
 
-            tabPage.Controls.Add(browserHostControl);
+            tabPage.Controls.Add(browser);
 
             browserTabControl.TabPages.Add(tabPage);
 
@@ -71,6 +97,7 @@ namespace CefSharp.WinForms.Example
             var browser = new BrowserTabUserControl(AddTab, url, multiThreadedMessageLoopEnabled)
             {
                 Dock = DockStyle.Fill,
+                Bounds = browserTabControl.Bounds
             };
 
             var tabPage = new TabPage(url)
@@ -114,22 +141,18 @@ namespace CefSharp.WinForms.Example
             new AboutBox().ShowDialog();
         }
 
-        public void RemoveTab(IntPtr windowHandle)
+        public void RemoveTab(ChromiumHostControl ctrl)
         {
-            var parentControl = FromChildHandle(windowHandle);
-            if (!parentControl.IsDisposed)
+            if (!ctrl.IsDisposed)
             {
-                if (parentControl.Parent is TabPage tabPage)
-                {
-                    browserTabControl.TabPages.Remove(tabPage);
-                }
-                else if (parentControl.Parent is Panel panel)
-                {
-                    var browserTabUserControl = (BrowserTabUserControl)panel.Parent;
+                var tabPage = ctrl.GetParentOfType<TabPage>();
 
-                    var tab = (TabPage)browserTabUserControl.Parent;
-                    browserTabControl.TabPages.Remove(tab);
+                if(tabPage == null)
+                {
+                    throw new Exception("Unable to find parent TabPage");
                 }
+
+                browserTabControl.TabPages.Remove(tabPage);
             }
         }
 
@@ -171,7 +194,7 @@ namespace CefSharp.WinForms.Example
 
         private void CloseTabToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if(browserTabControl.TabPages.Count == 0)
+            if (browserTabControl.TabPages.Count == 0)
             {
                 return;
             }
@@ -270,54 +293,49 @@ namespace CefSharp.WinForms.Example
             }
         }
 
-        private void ShowDevToolsMenuItemClick(object sender, EventArgs e)
+        private async void ShowDevToolsMenuItemClick(object sender, EventArgs e)
         {
             var control = GetCurrentTabControl();
             if (control != null)
             {
-                control.Browser.ShowDevTools();
-
-                //EXPERIMENTAL Example below shows how to use a control to host DevTools
-                //(in this case it's added as a new TabPage)
-                // NOTE: Does not currently move/resize correctly
-                //var tabPage = new TabPage("DevTools")
-                //{
-                //    Dock = DockStyle.Fill
-                //};
-
-                //var panel = new Panel
-                //{
-                //    Dock = DockStyle.Fill
-                //};
-
-                ////We need to call CreateControl as we need the Handle later
-                //panel.CreateControl();
-
-                //tabPage.Controls.Add(panel);
-
-                //browserTabControl.TabPages.Add(tabPage);
-
-                ////Make newly created tab active
-                //browserTabControl.SelectedTab = tabPage;
-
-                ////Grab the client rect
-                //var rect = panel.ClientRectangle;
-                //var webBrowser = control.Browser;
-                //var browser = webBrowser.GetBrowser().GetHost();
-                //var windowInfo = new WindowInfo();
-                ////DevTools becomes a child of the panel, we use it's dimesions
-                //windowInfo.SetAsChild(panel.Handle, rect.Left, rect.Top, rect.Right, rect.Bottom);
-                ////Show DevTools in our panel 
-                //browser.ShowDevTools(windowInfo);
+                var isDevToolsOpen = await control.CheckIfDevToolsIsOpenAsync();
+                if (!isDevToolsOpen)
+                {
+                    control.Browser.ShowDevTools();
+                }
             }
         }
 
-        private void CloseDevToolsMenuItemClick(object sender, EventArgs e)
+        private async void ShowDevToolsDockedMenuItemClick(object sender, EventArgs e)
         {
             var control = GetCurrentTabControl();
             if (control != null)
             {
-                control.Browser.CloseDevTools();
+                var isDevToolsOpen = await control.CheckIfDevToolsIsOpenAsync();
+                if (!isDevToolsOpen)
+                {
+                    var chromiumWebBrowser = control.Browser as ChromiumWebBrowser;
+                    if (chromiumWebBrowser != null && chromiumWebBrowser.LifeSpanHandler != null)
+                    {
+                        control.ShowDevToolsDocked();
+                    }
+                }
+            }
+        }
+
+        private async void CloseDevToolsMenuItemClick(object sender, EventArgs e)
+        {
+            var control = GetCurrentTabControl();
+            if (control != null)
+            {
+                //Check if DevTools is open before closing, this isn't strictly required
+                //If DevTools isn't open and you call CloseDevTools it's a No-Op, so prefectly
+                //safe to call without checking
+                var isDevToolsOpen = await control.CheckIfDevToolsIsOpenAsync();
+                if (isDevToolsOpen)
+                {
+                    control.Browser.CloseDevTools();
+                }
             }
         }
 
@@ -391,7 +409,7 @@ namespace CefSharp.WinForms.Example
             if (control != null)
             {
                 var frame = control.Browser.GetFocusedFrame();
-                
+
                 //Execute extension method
                 frame.ActiveElementAcceptsTextInput().ContinueWith(task =>
                 {
@@ -465,7 +483,7 @@ namespace CefSharp.WinForms.Example
             var control = GetCurrentTabControl();
             if (control != null)
             {
-                control.Browser.Load("custom://cefsharp/ScriptedMethodsTest.html");
+                control.Browser.LoadUrl("custom://cefsharp/ScriptedMethodsTest.html");
             }
         }
 
@@ -532,8 +550,81 @@ namespace CefSharp.WinForms.Example
             var control = GetCurrentTabControl();
             if (control != null)
             {
-                control.Browser.Load("https://httpbin.org/");
+                control.Browser.LoadUrl("https://httpbin.org/");
             }
+        }
+
+        private void RunFileDialogToolStripMenuItemClick(object sender, EventArgs e)
+        {
+            var control = GetCurrentTabControl();
+            if (control != null)
+            {
+                control.Browser.GetBrowserHost().RunFileDialog(CefFileDialogMode.Open, "Open", null, new List<string> { "*.*" }, new RunFileDialogCallback());
+            }
+        }
+
+        private void JavascriptBindingStressTestToolStripMenuItemClick(object sender, EventArgs e)
+        {
+            var control = GetCurrentTabControl();
+            if (control != null)
+            {
+                control.Browser.LoadUrl(CefExample.BindingTestUrl);
+                control.Browser.LoadingStateChanged += (o, args) =>
+                {
+                    if (args.IsLoading == false)
+                    {
+                        Task.Delay(10000).ContinueWith(t =>
+                        {
+                            if (control.Browser != null)
+                            {
+                                control.Browser.Reload();
+                            }
+                        });
+                    }
+                };
+            }
+        }
+
+        private void HideScrollbarsToolStripMenuItemClick(object sender, EventArgs e)
+        {
+            var control = GetCurrentTabControl();
+
+            _ = control?.HideScrollbarsAsync();
+        }
+
+        private async void TakeScreenShotMenuItemClick(object sender, EventArgs e)
+        {
+            var control = GetCurrentTabControl();
+
+            if(control == null)
+            {
+                return;
+            }
+
+            var chromiumWebBrowser = (ChromiumWebBrowser)control.Browser;
+
+            var contentSize = await chromiumWebBrowser.GetContentSizeAsync();
+
+            //Capture current scrollable area
+            var viewPort = new DevTools.Page.Viewport
+            {
+                Width = contentSize.Width,
+                Height = contentSize.Height,
+            };
+
+            var data = await chromiumWebBrowser.CaptureScreenshotAsync(viewPort: viewPort, captureBeyondViewport: true);
+
+            // Make a file to save it to (e.g. C:\Users\[user]\Desktop\CefSharp screenshot.png)
+            var screenshotPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "CefSharp screenshot" + DateTime.Now.Ticks + ".png");
+
+            File.WriteAllBytes(screenshotPath, data);
+
+            // Tell Windows to launch the saved image.
+            Process.Start(new ProcessStartInfo(screenshotPath)
+            {
+                // UseShellExecute is false by default on .NET Core.
+                UseShellExecute = true
+            });
         }
     }
 }

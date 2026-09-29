@@ -1,6 +1,9 @@
-﻿namespace CefSharp.Wpf
+namespace CefSharp.Wpf
 {
-    // Gratiously based on http://www.pinvoke.net/default.aspx/Enums/WindowsMessages.html
+    /// <summary>
+    /// Windows Message Enums
+    /// Gratiosly based on http://www.pinvoke.net/default.aspx/Enums/WindowsMessages.html
+    /// </summary>
     public enum WM : uint
     {
         /// <summary>
@@ -8,7 +11,7 @@
         /// key is a key that is pressed when the ALT key is not pressed.
         /// </summary>
         KEYDOWN = 0x0100,
-    
+
         /// <summary>
         /// The WM_KEYUP message is posted to the window with the keyboard focus when a nonsystem key is released. A nonsystem
         /// key is a key that is pressed when the ALT key is not pressed, or a keyboard key that is pressed when a window has the
@@ -41,7 +44,7 @@
 
         /// <summary>
         /// The WM_SYSCHAR message is posted to the window with the keyboard focus when a WM_SYSKEYDOWN message is translated by
-        /// the TranslateMessage function. It specifies the character code of a system character key — that is, a character key
+        /// the TranslateMessage function. It specifies the character code of a system character key that is, a character key
         /// that is pressed while the ALT key is down.
         /// </summary>
         SYSCHAR = 0x0106,
@@ -51,5 +54,27 @@
         /// its WindowProc function. 
         /// </summary>
         IME_CHAR = 0x0286,
+
+        /// <summary>
+        /// Sent immediately before the IME generates the composition string as a result of a keystroke. A window receives this
+        /// message through its WindowProc function.
+        /// </summary>
+        IME_STARTCOMPOSITION = 0x10D,
+
+        /// <summary>
+        /// Sent to an application when the IME ends composition. A window receives this message through its WindowProc function.
+        /// </summary>
+        IME_ENDCOMPOSITION = 0x10E,
+
+        /// <summary>
+        /// Sent to an application when the IME changes composition status as a result of a keystroke. A window receives this
+        /// message through its WindowProc function.
+        /// </summary>
+        IME_COMPOSITION = 0x10F,
+
+        /// <summary>
+        /// Sent to an application when a window is activated. A window receives this message through its WindowProc function.
+        /// </summary>
+        IME_SETCONTEXT = 0x281,
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2014 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -13,6 +13,11 @@ namespace CefSharp
     public interface IResponse : IDisposable
     {
         /// <summary>
+        /// Get/Set the response charset.
+        /// </summary>
+        string Charset { get; set; }
+
+        /// <summary>
         /// MimeType
         /// </summary>
         string MimeType { get; set; }
@@ -20,7 +25,7 @@ namespace CefSharp
         /// <summary>
         /// Response Headers
         /// </summary>
-        NameValueCollection ResponseHeaders { get; set; }
+        NameValueCollection Headers { get; set; }
 
         /// <summary>
         /// Returns true if this object is read-only.
@@ -42,5 +47,21 @@ namespace CefSharp
         /// Status Text
         /// </summary>
         string StatusText { get; set; }
+
+        /// <summary>
+        /// Returns the first header value for name or an empty string if not found.
+        /// Will not return the Referer value if any. Use <see cref="Headers"/> instead if name might have multiple values.
+        /// </summary>
+        /// <param name="name">header name</param>
+        /// <returns>Returns the first header value for name or an empty string if not found.</returns>
+        string GetHeaderByName(string name);
+
+        /// <summary>
+        /// Set the header name to value.
+        /// </summary>
+        /// <param name="name">header name</param>
+        /// <param name="value">new header value</param>
+        /// <param name="overwrite">If overwrite is true any existing values will be replaced with the new value. If overwrite is false any existing values will not be overwritten</param>
+        void SetHeaderByName(string name, string value, bool overwrite);
     }
 }

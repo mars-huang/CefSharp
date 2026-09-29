@@ -1,4 +1,4 @@
-﻿// Copyright © 2010-2017 The CefSharp Authors. All rights reserved.
+// Copyright © 2015 The CefSharp Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
@@ -71,7 +71,7 @@ namespace CefSharp
         /// Retrieve this frame's HTML source as a string sent to the specified visitor. 
         /// Use the <see cref="GetSourceAsync"/> method for a Task based async wrapper
         /// </summary>
-        /// <param name="visitor">visitor will recieve string values asynchronously</param>
+        /// <param name="visitor">visitor will receive string values asynchronously</param>
         void GetSource(IStringVisitor visitor);
 
         /// <summary>
@@ -86,11 +86,14 @@ namespace CefSharp
         /// Retrieve this frame's display text as a string sent to the specified visitor. 
         /// Use the <see cref="GetTextAsync"/> method for a Task based async wrapper
         /// </summary>
-        /// <param name="visitor">visitor will recieve string values asynchronously</param>
+        /// <param name="visitor">visitor will receive string values asynchronously</param>
         void GetText(IStringVisitor visitor);
 
         /// <summary>
-        /// Load the custom request.
+        /// Load the custom request. 
+        /// WARNING: This method will fail with "bad IPC message" reason
+        /// INVALID_INITIATOR_ORIGIN (213) unless you first navigate to the
+        /// request origin using some other mechanism (LoadURL, link click, etc).
         /// </summary>
         /// <param name="request">request to be loaded in the frame</param>
         void LoadRequest(IRequest request);
@@ -100,14 +103,6 @@ namespace CefSharp
         /// </summary>
         /// <param name="url">url to be loaded in the frame</param>
         void LoadUrl(string url);
-
-        /// <summary>
-        /// Load the contents of html with the specified dummy url.
-        /// </summary>
-        /// <param name="html">html to be loaded</param>
-        /// <param name="url"> should have a standard scheme (for example, http scheme) or behaviors like 
-        /// link clicks and web security restrictions may not behave as expected.</param>
-        void LoadStringForUrl(string html, string url);
 
         /// <summary>
         /// Execute a string of JavaScript code in this frame.
@@ -126,13 +121,17 @@ namespace CefSharp
         /// <param name="scriptUrl">is the URL where the script in question can be found, if any.</param>
         /// <param name="startLine">is the base line number to use for error reporting.</param>
         /// <param name="timeout">The timeout after which the Javascript code execution should be aborted.</param>
+        /// <param name="useImmediatelyInvokedFuncExpression">When true the script is wrapped in a self executing function.
+        /// Make sure to use a return statement in your javascript. e.g. (function () { return 42; })();
+        /// When false don't include a return statement e.g. 42;
+        /// </param>
         /// <returns>A Task that can be awaited to perform the script execution</returns>
-        Task<JavascriptResponse> EvaluateScriptAsync(string script, string scriptUrl = "about:blank", int startLine = 1, TimeSpan? timeout = null);
+        Task<JavascriptResponse> EvaluateScriptAsync(string script, string scriptUrl = "about:blank", int startLine = 1, TimeSpan? timeout = null, bool useImmediatelyInvokedFuncExpression = false);
 
         /// <summary>
         /// Returns true if this is the main (top-level) frame.
         /// </summary>
-        bool IsMain { get;  }
+        bool IsMain { get; }
 
         /// <summary>
         /// Returns true if this is the focused frame.
@@ -149,9 +148,10 @@ namespace CefSharp
         string Name { get; }
 
         /// <summary>
-        /// Returns the globally unique identifier for this frame or &lt; 0 if the underlying frame does not yet exist.
+        /// Returns the globally unique identifier for this frame or empty if the
+        /// underlying frame does not yet exist.
         /// </summary>
-        Int64 Identifier { get;  }
+        string Identifier { get; }
 
         /// <summary>
         /// Returns the parent of this frame or NULL if this is the main (top-level) frame.
@@ -179,5 +179,26 @@ namespace CefSharp
         /// <param name="initializePostData">Initialize the PostData object when creating this request</param>
         /// <returns>A new instance of the request</returns>
         IRequest CreateRequest(bool initializePostData = true);
+
+        /// <summary>
+        /// Create a new URL request that will be treated as originating from this frame
+        /// and the associated browser. This request may be intercepted by the client via
+        /// <see cref="IResourceRequestHandler"/> or <see cref="ISchemeHandlerFactory"/>.
+        /// Use IUrlRequest.Create instead if you do not want the request to have
+        /// this association, in which case it may be handled differently (see documentation on that method).
+        ///
+        /// Requests may originate from both the browser process and the render process.
+        /// For requests originating from the browser process: - POST data may only contain a single element
+        /// of type PDE_TYPE_FILE or PDE_TYPE_BYTES.
+        /// For requests originating from the render process: - POST data may only contain a single element of type PDE_TYPE_BYTES.
+        /// - If the response contains Content-Disposition or Mime-Type header values that would not normally be rendered then
+        /// the response may receive special handling inside the browser
+        /// for example, via the file download code path instead of the URL request code path).
+        ///
+        /// The request object will be marked as read-only after calling this method. 
+        /// </summary>
+        /// <param name="request">the web request</param>
+        /// <param name="client">the client</param>
+        IUrlRequest CreateUrlRequest(IRequest request, IUrlRequestClient client);
     }
 }
